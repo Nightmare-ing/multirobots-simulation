@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 
-import robot
+import Robot
 
 
 def main():
-    robot = my_robot.Robot()
+    robot = Robot.Robot()
     robot.draw()
 
 
