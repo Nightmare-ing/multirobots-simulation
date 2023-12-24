@@ -1,31 +1,30 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import itertools
 
 
 class CentralController:
-    def __init__(self, robots, fig):
+    def update_pos_and_draw(self, fig, data):
+        for robot in self.robots:
+            dt, speed = next(data)
+            robot.update(dt, speed)
+            robot.draw(fig)
+
+    def __init__(self, robots):
         self.central_point = (0, 0)
         self.radius = 3.0
         self.robots = robots
-        self.fig = fig
+        self.rotate_speed = 3.0
 
-    def run(self):
-        total_time = 100.0
-        dt = 0.01
-        t = 0.0
-        rotate_speed = 3
-        while t < total_time:
+    def speed_gen(self):
+        for _ in itertools.count():
+            speeds = []
+            dt = 0.0001
             for robot in self.robots:
                 cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
                                        robot.posture[0] - self.central_point[0])
-                speed = (-rotate_speed * self.radius * np.sin(cur_angle),
-                         rotate_speed * self.radius * np.cos(cur_angle),
+                speed = (-self.rotate_speed * self.radius * np.sin(cur_angle),
+                         self.rotate_speed * self.radius * np.cos(cur_angle),
                          0.0)
-                robot.update(dt, speed)
-                robot.draw(self.fig)
-            plt.draw()
-            plt.pause(0.1)
-            plt.cla()
-            t += dt
-
-
+                speeds.append(speed)
+            yield dt, speeds
