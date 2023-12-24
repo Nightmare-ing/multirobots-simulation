@@ -15,17 +15,19 @@ class Robot:
     # to count how many robots have been created
     robot_num = 0
 
-    def __init__(self, initial_posture=(0, 0, 0), camera=Camera(), camera_angle=0.0):
+    def __init__(self, initial_posture=(0, 0, 0), speed=(0, 0), camera=Camera(), camera_angle=0.0):
         # give each robot a unique id for plt legend
         self.robot_id = Robot.robot_num
         Robot.robot_num += 1
         self.posture = np.array(initial_posture)
+        self.speed = np.array(speed)
         self.camera = camera
         self.camera_angle = camera_angle
         self.color = np.random.uniform(0.3, 1, 3)
 
-    def update_position(self, new_posture):
-        self.posture = np.array(new_posture)
+    def update(self, dt, speed=(0, 0)):
+        self.posture = self.posture + self.speed * dt
+        self.speed = np.array(speed)
 
     def draw(self, fig):
         # generate random colors for each robot, the color should not be too light to see
