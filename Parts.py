@@ -37,11 +37,12 @@ class Robot:
         self.entire_visible_region = patches.Wedge((0, 0),
                                                    float(self.camera.visible_radius * self.camera.visible_range[1]),
                                                    0, 0,
-                                                   color=self.color, alpha=0.3)
+                                                   edgecolor=self.color, linestyle='--',
+                                                   facecolor=self.color, alpha=0.3)
         self.invisible_region = patches.Wedge((0, 0),
                                               float(self.camera.visible_radius * self.camera.visible_range[0]),
                                               0, 0,
-                                              color=plt.gcf().get_facecolor())
+                                              facecolor=plt.gcf().get_facecolor())
 
     def update(self, dt, speed=(0, 0, 0)):
         self.posture = self.posture + (self.speed * dt)
