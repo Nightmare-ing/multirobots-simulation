@@ -17,6 +17,11 @@ class Robot:
     # to count how many robots have been created
     robot_num = 0
 
+    @staticmethod
+    def initialize_robots(num_robots, posture, speed):
+        robots = [Robot(initial_posture=posture[i], speed=speed[i]) for i in range(num_robots)]
+        return robots
+
     def __init__(self, initial_posture=(0, 0, 0), speed=(0, 0, 0), camera=Camera(), camera_angle=0.0):
         # give each robot a unique id for plt legend
         self.robot_id = Robot.robot_num
