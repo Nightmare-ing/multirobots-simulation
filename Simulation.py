@@ -30,8 +30,8 @@ class Simulation:
     def update_scene(self, data):
         # update robot position with controller output
         dt, speeds = data
-        for i in range(len(self.robots)):
-            self.robots[i].update(dt, speeds[i])
+        for robot, speed in zip(self.robots, speeds):
+            robot.update(dt, speed)
 
         return [region for robot in self.robots for region in robot.visible_region] + \
             [robot.robot_point for robot in self.robots]
