@@ -30,62 +30,42 @@ class Robot:
         self.speed = np.array(speed)
         self.camera = camera
         self.camera_angle = camera_angle
-        self.color = np.random.uniform(0.3, 1, 3)
+
+        # some elems for drawing
+        self.color = np.random.uniform(0, 0.6, 3)
+        self.point = patches.Circle((0, 0), 0.2, color=self.color)
+        self.entire_visible_region = patches.Wedge((0, 0),
+                                                   float(self.camera.visible_radius * self.camera.visible_range[1]),
+                                                   0, 0,
+                                                   color=self.color, edgecolor=self.color, linestyle='--', linewidth=1,
+                                                   alpha=0.3)
+        self.invisible_region = patches.Wedge((0, 0),
+                                              float(self.camera.visible_radius * self.camera.visible_range[0]),
+                                              0, 0,
+                                              color=plt.gcf().get_facecolor(), edgecolor=self.color, linestyle='--',
+                                              linewidth=1)
 
     def update(self, dt, speed=(0, 0, 0)):
         self.posture = self.posture + (self.speed * dt)
         self.speed = np.array(speed)
 
-    def draw(self, fig):
-        # draw robot point
-        fig.plot(self.posture[0], self.posture[1], 'o', color=self.color, markersize=8,
-                 label=f'Robot {self.robot_id}')
+    @property
+    def robot_point(self):
+        self.point.center = (float(self.posture[0]), float(self.posture[1]))
+        return self.point
 
-        # draw fov
-        fig.add_patch(
-            patches.Wedge(
-                (float(self.posture[0]), float(self.posture[1])),
-                float(self.camera.visible_radius * self.camera.visible_range[1]),
-                math.degrees(self.posture[2] + self.camera_angle - self.camera.field_angle / 2),
-                math.degrees(self.posture[2] + self.camera_angle + self.camera.field_angle / 2),
-                color=self.color, alpha=0.3
-            )
-        )
-
-        # erase invisible part of fov
-        fig.add_patch(
-            patches.Wedge(
-                (float(self.posture[0]), float(self.posture[1])),
-                float(self.camera.visible_radius * self.camera.visible_range[0]),
-                math.degrees(self.posture[2] + self.camera_angle - self.camera.field_angle / 2),
-                math.degrees(self.posture[2] + self.camera_angle + self.camera.field_angle / 2),
-                color=plt.gcf().get_facecolor()
-            )
-        )
-
-        # draw fov outer edge
-        fig.add_patch(
-            patches.Arc(
-                (float(self.posture[0]), float(self.posture[1])),
-                float(2 * self.camera.visible_radius * self.camera.visible_range[1]),
-                float(2 * self.camera.visible_radius * self.camera.visible_range[1]),
-                theta1=math.degrees(self.posture[2] + self.camera_angle - self.camera.field_angle / 2),
-                theta2=math.degrees(self.posture[2] + self.camera_angle + self.camera.field_angle / 2),
-                color=self.color, linestyle='--'
-            )
-        )
-
-        # draw fov inner edge
-        fig.add_patch(
-            patches.Arc(
-                (float(self.posture[0]), float(self.posture[1])),
-                float(2 * self.camera.visible_radius * self.camera.visible_range[0]),
-                float(2 * self.camera.visible_radius * self.camera.visible_range[0]),
-                theta1=math.degrees(self.posture[2] + self.camera_angle - self.camera.field_angle / 2),
-                theta2=math.degrees(self.posture[2] + self.camera_angle + self.camera.field_angle / 2),
-                color=self.color, linestyle='--'
-            )
-        )
+    @property
+    def visible_region(self):
+        theta1 = math.degrees(self.posture[2] + self.camera_angle - self.camera.field_angle / 2)
+        theta2 = math.degrees(self.posture[2] + self.camera_angle + self.camera.field_angle / 2)
+        position = (float(self.posture[0]), float(self.posture[1]))
+        self.entire_visible_region.set_center(position)
+        self.entire_visible_region.set_theta1(theta1)
+        self.entire_visible_region.set_theta2(theta2)
+        self.invisible_region.set_center(position)
+        self.invisible_region.set_theta1(theta1)
+        self.invisible_region.set_theta2(theta2)
+        return self.entire_visible_region, self.invisible_region
 
     def __str__(self):
         return f"Robot {self.robot_id}- Position: {self.posture}"
