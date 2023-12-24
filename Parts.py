@@ -1,5 +1,4 @@
 import math
-
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
@@ -33,12 +32,11 @@ class Robot:
         self.speed = np.array(speed)
 
     def draw(self, fig):
-        # generate random colors for each robot, the color should not be too light to see
-
         # draw robot point
         fig.plot(self.posture[0], self.posture[1], 'o', color=self.color, markersize=8,
                  label=f'Robot {self.robot_id}')
 
+        # draw fov
         fig.add_patch(
             patches.Wedge(
                 (float(self.posture[0]), float(self.posture[1])),
@@ -49,6 +47,7 @@ class Robot:
             )
         )
 
+        # erase invisible part of fov
         fig.add_patch(
             patches.Wedge(
                 (float(self.posture[0]), float(self.posture[1])),
@@ -58,18 +57,30 @@ class Robot:
                 color=plt.gcf().get_facecolor()
             )
         )
-        # draw sector part of fov
-        fov_radius = self.camera.visible_radius
-        fov_theta = np.linspace(self.posture[2] + self.camera_angle - self.camera.field_angle / 2,
-                                self.posture[2] + self.camera_angle + self.camera.field_angle / 2,
-                                100)
-        fov_x_start = self.posture[0] + fov_radius * self.camera.visible_range[0] * np.cos(fov_theta)
-        fov_y_start = self.posture[1] + fov_radius * self.camera.visible_range[0] * np.sin(fov_theta)
-        fov_x_end = self.posture[0] + fov_radius * self.camera.visible_range[1] * np.cos(fov_theta)
-        fov_y_end = self.posture[1] + fov_radius * self.camera.visible_range[1] * np.sin(fov_theta)
-        # draw fov edge
-        fig.plot(fov_x_end, fov_y_end, color=self.color, linestyle='--')
-        fig.plot(fov_x_start, fov_y_start, color=self.color, linestyle='--')
+
+        # draw fov outer edge
+        fig.add_patch(
+            patches.Arc(
+                (float(self.posture[0]), float(self.posture[1])),
+                float(2 * self.camera.visible_radius * self.camera.visible_range[1]),
+                float(2 * self.camera.visible_radius * self.camera.visible_range[1]),
+                theta1=math.degrees(self.posture[2] + self.camera_angle - self.camera.field_angle / 2),
+                theta2=math.degrees(self.posture[2] + self.camera_angle + self.camera.field_angle / 2),
+                color=self.color, linestyle='--'
+            )
+        )
+
+        # draw fov inner edge
+        fig.add_patch(
+            patches.Arc(
+                (float(self.posture[0]), float(self.posture[1])),
+                float(2 * self.camera.visible_radius * self.camera.visible_range[0]),
+                float(2 * self.camera.visible_radius * self.camera.visible_range[0]),
+                theta1=math.degrees(self.posture[2] + self.camera_angle - self.camera.field_angle / 2),
+                theta2=math.degrees(self.posture[2] + self.camera_angle + self.camera.field_angle / 2),
+                color=self.color, linestyle='--'
+            )
+        )
 
     def __str__(self):
         return f"Robot {self.robot_id}- Position: {self.posture}"
