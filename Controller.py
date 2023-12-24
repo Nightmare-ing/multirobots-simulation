@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 import itertools
 
@@ -14,7 +14,11 @@ class CentralController:
         self.central_point = (0, 0)
         self.radius = 3.0
         self.robots = robots
-        self.rotate_speed = 3.0
+        self.rotate_speed = 5.0
+
+    @property
+    def desired_trace(self):
+        return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
     def speed_gen(self):
         for _ in itertools.count():
