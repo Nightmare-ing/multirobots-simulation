@@ -66,7 +66,7 @@ class Robot:
         self.invisible_region.set_theta2(theta2)
         return self.entire_visible_region, self.invisible_region
 
-    def inspected(self, robot):
+    def inspect(self, robot):
         relative_pos_vec = self.posture[:2] - robot.posture[:2]
         dist = np.linalg.norm(relative_pos_vec)
         angle = np.arctan2(relative_pos_vec[0], relative_pos_vec[1])
@@ -76,6 +76,18 @@ class Robot:
         dis_valid = (dist > visible_radius_range[0]) & (dist < visible_radius_range[1])
         angle_valid = (angle < visible_angle_range[1]) & (angle > visible_angle_range[0])
         return dis_valid & angle_valid
+
+    def get_visible_robots(self, robots):
+        """
+        get the robots that self can see
+        :param robots: robot inspecting
+        :return: robots that self can see
+        """
+        visible_robots = []
+        for other_robot in robots:
+            if other_robot is not robots and self.inspect(other_robot):
+                visible_robots.append(other_robot)
+        return visible_robots
 
     def __str__(self):
         return f"Robot {self.robot_id}- Position: {self.posture}"
