@@ -7,11 +7,9 @@ from Simulation import Simulation
 
 def main():
     robots = Robot.initialize_robots(4,
-                                     posture=[(3, 0, 0), (0, 3, 0), (-3, 0, 0), (0, -3, 0)],
+                                     posture=[(5, 0, 0), (0, 5, 0), (-5, 0, 0), (0, -5, 0)],
                                      speed=[(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)])
     fig, ax = plt.subplots()
-    desired_trace = patches.Circle((0, 0), 3, color='black', fill=False)
-    ax.add_patch(desired_trace)
     controller = CentralController(robots)
     simulation_scene = Simulation(fig, ax, robots, controller)
     simulation_scene.show_animation()

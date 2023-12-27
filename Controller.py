@@ -12,9 +12,9 @@ class CentralController:
 
     def __init__(self, robots):
         self.central_point = (0, 0)
-        self.radius = 3.0
+        self.radius = 5.0
         self.robots = robots
-        self.rotate_speed = 5.0
+        self.rotate_speed = 1.0
 
     @property
     def desired_trace(self):
@@ -23,7 +23,7 @@ class CentralController:
     def speed_gen(self):
         for _ in itertools.count():
             speeds = []
-            dt = 0.0001
+            dt = 0.005
             for robot in self.robots:
                 cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
                                        robot.posture[0] - self.central_point[0])

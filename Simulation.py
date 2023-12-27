@@ -38,7 +38,7 @@ class Simulation:
 
     def show_animation(self):
         self.ani = animation.FuncAnimation(self.fig, self.update_scene, self.controller.speed_gen,
-                                           init_func=self.initialize_scene, interval=1, blit=True,
+                                           init_func=self.initialize_scene, interval=100, blit=True,
                                            cache_frame_data=False, save_count=100)
         plt.show()
 
