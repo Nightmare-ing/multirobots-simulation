@@ -66,5 +66,16 @@ class Robot:
         self.invisible_region.set_theta2(theta2)
         return self.entire_visible_region, self.invisible_region
 
+    def inspected(self, robot):
+        relative_pos_vec = self.posture[:2] - robot.posture[:2]
+        dist = np.linalg.norm(relative_pos_vec)
+        angle = np.arctan2(relative_pos_vec[0], relative_pos_vec[1])
+        visible_radius_range = self.camera.visible_radius * self.camera.visible_range
+        visible_angle_range = [self.posture[2] + self.camera_angle - self.camera.field_angle / 2,
+                               self.posture[2] + self.camera_angle + self.camera.field_angle / 2]
+        dis_valid = (dist > visible_radius_range[0]) & (dist < visible_radius_range[1])
+        angle_valid = (angle < visible_angle_range[1]) & (angle > visible_angle_range[0])
+        return dis_valid & angle_valid
+
     def __str__(self):
         return f"Robot {self.robot_id}- Position: {self.posture}"
