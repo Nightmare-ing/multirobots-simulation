@@ -99,8 +99,11 @@ class DecentralizedController(Controller):
     __ki = 0.1
 
     def __init__(self, robots):
-        super().__init__()
-        self.robots = robots
+        super().__init__(robots)
+        self.z = np.zeros(len(self.robots))
+        self.w = np.zeros(len(self.robots))
+        self.v2 = np.zeros(len(self.robots))
+        self.lambda2 = np.zeros(len(self.robots))
 
     @property
     def desired_trace(self):
@@ -118,4 +121,20 @@ class DecentralizedController(Controller):
                          0.0)
                 speeds.append(speed)
             yield dt, speeds
+
+    def update_zi(self, alpha_i):
+        """
+        compute the average of eigen vector estimation of robot i
+        :param alpha_i: input alpha_i
+        :return: the average of eigen vector estimation of robot i
+        """
+        for index, robot in enumerate(self.robots):
+            visible_robots_index = [visible_robot.robot_id for visible_robot in
+                                    robot.get_visible_robots(self.robots)]
+            sum_zi_minus_zj = (self.z[index] - self.z[visible_robots_index]).sum()
+            sum_wi_minus_wj = (self.w[index] - self.w[visible_robots_index]).sum()
+            dw_i = -self.__ki * sum_zi_minus_zj
+            dz_i = self.__gama * (alpha_i - self.z[index]) - sum_zi_minus_zj + self.__ki * sum_wi_minus_wj
+            self.w[index] += dw_i
+            self.z[index] += dz_i
 
