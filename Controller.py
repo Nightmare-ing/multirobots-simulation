@@ -117,19 +117,6 @@ class DecentralizedController(Controller):
     def desired_trace(self):
         return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
-    def speed_gen(self):
-        for _ in itertools.count():
-            speeds = []
-            dt = 0.005
-            for robot in self.robots:
-                cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
-                                       robot.posture[0] - self.central_point[0])
-                speed = (-self.w_r * self.radius * np.sin(cur_angle),
-                         self.w_r * self.radius * np.cos(cur_angle),
-                         0.0)
-                speeds.append(speed)
-            yield dt, speeds
-
     def update_z(self):
         """
         compute and update the average of eigen vector estimation of robot i
@@ -163,4 +150,26 @@ class DecentralizedController(Controller):
     @property
     def lambda2_tilde(self):
         return self.__k3 / self.__k2 * (1 - self.z[:, 0])
+
+    def speed_gen(self):
+        for _ in itertools.count():
+            speeds = []
+            dt = 0.005
+            for index, robot in enumerate(self.robots):
+                cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
+                                       robot.posture[0] - self.central_point[0])
+                visible_robots_index = [visible_robot.robot_id for visible_robot in
+                                        robot.get_visible_robots(self.robots)]
+                w_i = ((-self.l_matrix[index, visible_robots_index]
+                       * (self.v_tilde2[index] - self.v_tilde2[visible_robots_index]))**2 *
+                       np.linalg.norm(self.robots[index].posture[:2] - self.robots[visible_robots_index].posture[:2]) /
+                       self.__sigma**2).sum()
+                rounded_w_i = self.speed_round(w_i * self.radius)
+                rotate_speed = self.angular_vel_round(w_i)
+                speed = (-rounded_w_i * np.sin(cur_angle),
+                         rounded_w_i * np.cos(cur_angle),
+                         rotate_speed)
+                self.update_v_tilde2()
+                speeds.append(speed)
+            yield dt, speeds
 
