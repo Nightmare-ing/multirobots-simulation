@@ -1,8 +1,10 @@
+import math
 from typing import List, Any
 
 import matplotlib.patches as patches
 import numpy as np
 import itertools
+import pdb
 
 
 class Controller:
@@ -100,16 +102,16 @@ class DecentralizedController(Controller):
     __kp = 0.1
     __ki = 0.1
     __k1 = 0.1
-    __k2 = 0.1
+    __k2 = 0.001
     __k3 = 0.1
-    __sigma = 0.1
+    __sigma = 1
 
     def __init__(self, robots):
         super().__init__(robots)
-        self.z = np.zeros((len(self.robots), 2))
-        self.w = np.zeros((len(self.robots), 2))
-        self.v_tilde2 = np.zeros(len(self.robots))
-        self.lambda2 = np.zeros(len(self.robots))
+        self.z = np.ones((len(self.robots), 2))
+        self.w = np.ones((len(self.robots), 2))
+        self.v_tilde2 = np.ones(len(self.robots))
+        self.lambda2 = np.ones(len(self.robots))
 
     @property
     def alpha(self):
@@ -129,7 +131,8 @@ class DecentralizedController(Controller):
             sum_zi_minus_zj = (self.z[index] - self.z[visible_robots_index]).sum(axis=0)
             sum_wi_minus_wj = (self.w[index] - self.w[visible_robots_index]).sum(axis=0)
             dw_i = -self.__ki * sum_zi_minus_zj
-            dz_i = self.__gama * (self.alpha[index] - self.z[index]) - sum_zi_minus_zj + self.__ki * sum_wi_minus_wj
+            dz_i = (self.__gama * (self.alpha[index] - self.z[index]) - self.__kp * sum_zi_minus_zj +
+                    self.__ki * sum_wi_minus_wj)
             self.w[index] += dw_i
             self.z[index] += dz_i
 
@@ -143,7 +146,7 @@ class DecentralizedController(Controller):
             sum_aij_times_v2i_minus_v2j = ((self.l_matrix[index, visible_robots_index] *
                                             (self.v_tilde2[index] - self.v_tilde2[visible_robots_index]))
                                            .sum(axis=0))
-            dv_tilde2_i = (-self.__k1 * self.v_tilde2[index] - self.__k2 * sum_aij_times_v2i_minus_v2j - self.__k3 *
+            dv_tilde2_i = (-self.__k1 * self.z[index, 0] - self.__k2 * sum_aij_times_v2i_minus_v2j - self.__k3 *
                            (self.z[index, 1] - 1) * self.v_tilde2[index])
             self.v_tilde2[index] += dv_tilde2_i
 
@@ -169,7 +172,7 @@ class DecentralizedController(Controller):
                             * (self.v_tilde2[index] - self.v_tilde2[visible_robots_index])) ** 2 *
                            np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
                     rounded_w_i = self.speed_round(w_i * self.radius)
-                    rotate_speed = self.angular_vel_round(w_i)
+                    rotate_speed = self.angular_vel_round(w_i / 100)
                     speed = (-rounded_w_i * np.sin(cur_angle),
                              rounded_w_i * np.cos(cur_angle),
                              rotate_speed)

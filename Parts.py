@@ -85,7 +85,7 @@ class Robot:
         """
         visible_robots = []
         for other_robot in robots:
-            if other_robot is not robots and self.inspect(other_robot):
+            if other_robot is not self and self.inspect(other_robot):
                 visible_robots.append(other_robot)
         return visible_robots
 
