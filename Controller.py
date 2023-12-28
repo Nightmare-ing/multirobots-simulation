@@ -97,12 +97,16 @@ class DecentralizedController(Controller):
     __gama = 0.1
     __kp = 0.1
     __ki = 0.1
+    __k1 = 0.1
+    __k2 = 0.1
+    __k3 = 0.1
+    __sigma = 0.1
 
     def __init__(self, robots):
         super().__init__(robots)
         self.z = np.zeros((2, len(self.robots)))
         self.w = np.zeros((2, len(self.robots)))
-        self.v2 = np.zeros(len(self.robots))
+        self.v_tilde2 = np.zeros(len(self.robots))
         self.lambda2 = np.zeros(len(self.robots))
 
     @property
@@ -139,4 +143,24 @@ class DecentralizedController(Controller):
             dz_i = self.__gama * (self.alpha[index] - self.z[index]) - sum_zi_minus_zj + self.__ki * sum_wi_minus_wj
             self.w[index] += dw_i
             self.z[index] += dz_i
+
+    def update_v_tilde2(self):
+        """
+        compute and update the eigen vector(self.v_tilde2) estimation of robot i
+        """
+        for index, robot in enumerate(self.robots):
+            visible_robots_index = [visible_robot.robot_id for visible_robot in
+                                    robot.get_visible_robots(self.robots)]
+            sum_aij_times_v2i_minus_v2j = ((self.l_matrix[index, visible_robots_index] *
+                                            (self.v_tilde2[index] - self.v_tilde2[visible_robots_index]))
+                                           .sum(axis=0))
+            dv_tilde2_i = -self.__k1 * self.v_tilde2[index, 0] - self.__k2 * sum_aij_times_v2i_minus_v2j -
+            self.__k3 * (self.z[index, 1] - 1) * self.v_tilde2[index]
+            self.v_tilde2[index] += dv_tilde2_i
+
+        self.update_z()
+
+    @property
+    def lambda2_tilde(self):
+        return self.__k3 / self.__k2 * (1 - self.z[:, 0])
 
