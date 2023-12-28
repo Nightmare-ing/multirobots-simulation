@@ -16,7 +16,7 @@ def main():
     controller = DecentralizedController(robots)
     simulation_scene = Simulation(fig, ax, robots, controller)
     simulation_scene.show_animation()
-    simulation_scene.save_animation("test.mp4")
+    # simulation_scene.save_animation("test.mp4")
 
 
 if __name__ == "__main__":
