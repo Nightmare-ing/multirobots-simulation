@@ -6,10 +6,12 @@ import itertools
 class Controller:
     __gravity_velocity = 9.81
 
-    def __init__(self):
+    def __init__(self, robots):
         self.radius = 5.0
         self.central_point = (0.0, 0.0)
         self.w_r = 1.0
+        self.robots = robots
+        self.matrix = np.zeros((len(self.robots), len(self.robots)))
 
     @property
     def _speed_range(self):
@@ -22,6 +24,27 @@ class Controller:
     @property
     def _acceleration_range(self):
         return np.array([-self.__gravity_velocity, self.__gravity_velocity])
+
+    @property
+    def desired_trace(self):
+        return None
+
+    @property
+    def l_matrix(self):
+        a_matrix = np.zeros((len(self.robots), len(self.robots)))
+        d_matrix = np.zeros((len(self.robots), len(self.robots)))
+        for i, j in self.matrix.shape:
+            if self.robots[i].inspect(self.robots[j]):
+                a_matrix[i, j] = np.linalg.norm(self.robots[i].posture[:2] - self.robots[j].posture[:2])
+
+        for i in range(len(self.robots)):
+            d_matrix[i, i] = a_matrix[i, :].sum()
+
+        self.matrix = a_matrix - d_matrix
+        return self.matrix
+
+    def speed_gen(self):
+        yield 0, [(0, 0, 0)] * len(self.robots)
 
     def speed_round(self, speeds_xy):
         """
@@ -49,11 +72,31 @@ class Controller:
 
 
 class CentralController(Controller):
-    def update_pos_and_draw(self, fig, data):
-        for robot in self.robots:
-            dt, speed = next(data)
-            robot.update(dt, speed)
-            robot.draw(fig)
+    def __init__(self, robots):
+        super().__init__(robots)
+
+    @property
+    def desired_trace(self):
+        return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
+
+    def speed_gen(self):
+        for _ in itertools.count():
+            speeds = []
+            dt = 0.005
+            for robot in self.robots:
+                cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
+                                       robot.posture[0] - self.central_point[0])
+                speed = (-self.w_r * self.radius * np.sin(cur_angle),
+                         self.w_r * self.radius * np.cos(cur_angle),
+                         0.0)
+                speeds.append(speed)
+            yield dt, speeds
+
+
+class DecentralizedController(Controller):
+    __gama = 0.1
+    __kp = 0.1
+    __ki = 0.1
 
     def __init__(self, robots):
         super().__init__()
