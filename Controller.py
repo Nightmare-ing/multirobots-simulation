@@ -1,3 +1,5 @@
+from typing import List, Any
+
 import matplotlib.patches as patches
 import numpy as np
 import itertools
@@ -33,7 +35,7 @@ class Controller:
     def l_matrix(self):
         a_matrix = np.zeros((len(self.robots), len(self.robots)))
         d_matrix = np.zeros((len(self.robots), len(self.robots)))
-        for i, j in self.matrix.shape:
+        for (i, j), _ in np.ndenumerate(self.matrix):
             if self.robots[i].inspect(self.robots[j]):
                 a_matrix[i, j] = np.linalg.norm(self.robots[i].posture[:2] - self.robots[j].posture[:2])
 
@@ -104,14 +106,14 @@ class DecentralizedController(Controller):
 
     def __init__(self, robots):
         super().__init__(robots)
-        self.z = np.zeros((2, len(self.robots)))
-        self.w = np.zeros((2, len(self.robots)))
+        self.z = np.zeros((len(self.robots), 2))
+        self.w = np.zeros((len(self.robots), 2))
         self.v_tilde2 = np.zeros(len(self.robots))
         self.lambda2 = np.zeros(len(self.robots))
 
     @property
     def alpha(self):
-        return np.array([self.v_tilde2.transpose(), self.v_tilde2.transpose() ** 2])
+        return np.array([self.v_tilde2, self.v_tilde2 ** 2]).transpose()
 
     @property
     def desired_trace(self):
@@ -141,8 +143,8 @@ class DecentralizedController(Controller):
             sum_aij_times_v2i_minus_v2j = ((self.l_matrix[index, visible_robots_index] *
                                             (self.v_tilde2[index] - self.v_tilde2[visible_robots_index]))
                                            .sum(axis=0))
-            dv_tilde2_i = -self.__k1 * self.v_tilde2[index, 0] - self.__k2 * sum_aij_times_v2i_minus_v2j -
-            self.__k3 * (self.z[index, 1] - 1) * self.v_tilde2[index]
+            dv_tilde2_i = (-self.__k1 * self.v_tilde2[index] - self.__k2 * sum_aij_times_v2i_minus_v2j - self.__k3 *
+                           (self.z[index, 1] - 1) * self.v_tilde2[index])
             self.v_tilde2[index] += dv_tilde2_i
 
         self.update_z()
@@ -158,18 +160,22 @@ class DecentralizedController(Controller):
             for index, robot in enumerate(self.robots):
                 cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
                                        robot.posture[0] - self.central_point[0])
-                visible_robots_index = [visible_robot.robot_id for visible_robot in
-                                        robot.get_visible_robots(self.robots)]
-                w_i = ((-self.l_matrix[index, visible_robots_index]
-                       * (self.v_tilde2[index] - self.v_tilde2[visible_robots_index]))**2 *
-                       np.linalg.norm(self.robots[index].posture[:2] - self.robots[visible_robots_index].posture[:2]) /
-                       self.__sigma**2).sum()
-                rounded_w_i = self.speed_round(w_i * self.radius)
-                rotate_speed = self.angular_vel_round(w_i)
-                speed = (-rounded_w_i * np.sin(cur_angle),
-                         rounded_w_i * np.cos(cur_angle),
-                         rotate_speed)
-                self.update_v_tilde2()
+                visible_robots = robot.get_visible_robots(self.robots)
+                visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
+                                                   visible_robots]
+                if visible_robots_index:
+                    pj_vec = np.array([robot.posture[:2] for robot in visible_robots])
+                    w_i = ((-self.l_matrix[index, visible_robots_index]
+                            * (self.v_tilde2[index] - self.v_tilde2[visible_robots_index])) ** 2 *
+                           np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
+                    rounded_w_i = self.speed_round(w_i * self.radius)
+                    rotate_speed = self.angular_vel_round(w_i)
+                    speed = (-rounded_w_i * np.sin(cur_angle),
+                             rounded_w_i * np.cos(cur_angle),
+                             rotate_speed)
+                    self.update_v_tilde2()
+                else:
+                    speed = (-self._speed_range[1] * np.sin(cur_angle), self._speed_range[0] * np.cos(cur_angle),
+                             self._angular_vel_range[1])
                 speeds.append(speed)
             yield dt, speeds
-
