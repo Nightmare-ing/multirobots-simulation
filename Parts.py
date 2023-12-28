@@ -67,15 +67,11 @@ class Robot:
         return self.entire_visible_region, self.invisible_region
 
     def inspect(self, robot):
-        relative_pos_vec = self.posture[:2] - robot.posture[:2]
-        dist = np.linalg.norm(relative_pos_vec)
-        angle = np.arctan2(relative_pos_vec[0], relative_pos_vec[1])
-        visible_radius_range = self.camera.visible_radius * self.camera.visible_range
-        visible_angle_range = [self.posture[2] + self.camera_angle - self.camera.field_angle / 2,
-                               self.posture[2] + self.camera_angle + self.camera.field_angle / 2]
-        dis_valid = (dist > visible_radius_range[0]) & (dist < visible_radius_range[1])
-        angle_valid = (angle < visible_angle_range[1]) & (angle > visible_angle_range[0])
-        return dis_valid & angle_valid
+        transformed_point = tuple[float, float](self.visible_region[0].get_transform().transform(robot.posture[:2]))
+        inside_entire_region = self.visible_region[0].contains_point(transformed_point)
+        transformed_point = tuple[float, float](self.visible_region[1].get_transform().transform(robot.posture[:2]))
+        inside_invisible_region = self.visible_region[1].contains_point(transformed_point)
+        return inside_entire_region and not inside_invisible_region
 
     def get_visible_robots(self, robots):
         """
