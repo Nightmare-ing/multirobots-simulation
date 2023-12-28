@@ -106,6 +106,10 @@ class DecentralizedController(Controller):
         self.lambda2 = np.zeros(len(self.robots))
 
     @property
+    def alpha(self):
+        return np.array([self.v_tilde2.transpose(), self.v_tilde2.transpose() ** 2])
+
+    @property
     def desired_trace(self):
         return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
@@ -122,11 +126,9 @@ class DecentralizedController(Controller):
                 speeds.append(speed)
             yield dt, speeds
 
-    def update_z(self, alpha):
+    def update_z(self):
         """
-        compute the average of eigen vector estimation of robot i
-        :param alpha: input 1*2-dim vector, representing [Ave{{v2}}, Ave{{v2^2}}]
-        :return: the average of eigen vector estimation of robot i
+        compute and update the average of eigen vector estimation of robot i
         """
         for index, robot in enumerate(self.robots):
             visible_robots_index = [visible_robot.robot_id for visible_robot in
@@ -134,7 +136,7 @@ class DecentralizedController(Controller):
             sum_zi_minus_zj = (self.z[index] - self.z[visible_robots_index]).sum(axis=0)
             sum_wi_minus_wj = (self.w[index] - self.w[visible_robots_index]).sum(axis=0)
             dw_i = -self.__ki * sum_zi_minus_zj
-            dz_i = self.__gama * (alpha - self.z[index]) - sum_zi_minus_zj + self.__ki * sum_wi_minus_wj
+            dz_i = self.__gama * (self.alpha[index] - self.z[index]) - sum_zi_minus_zj + self.__ki * sum_wi_minus_wj
             self.w[index] += dw_i
             self.z[index] += dz_i
 
