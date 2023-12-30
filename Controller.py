@@ -11,30 +11,50 @@ class Controller:
     __gravity_velocity = 9.81
 
     def __init__(self, robots):
-        self.radius = 5.0
-        self.central_point = (0.0, 0.0)
-        self.w_r = 1.0
-        self.robots = robots
-        self.matrix = np.zeros((len(self.robots), len(self.robots)))
+        self.radius = 5.0  # radius of the desired trace
+        self.central_point = (0.0, 0.0)  # central point coordinates of the desired trace
+        self.w_r = 1.0  # required robots rotating speed along the trace
+        self.robots = robots  # robots to control
+        self.matrix = np.zeros((len(self.robots), len(self.robots)))  # for storing Laplacian matrix
 
     @property
     def _speed_range(self):
+        """
+        Define available norm of speed range
+        :return: available norm of speed range, np.array([a, b])
+        """
         return np.array([0.0, 2 * self.w_r * self.radius])
 
     @property
     def _angular_vel_range(self):
+        """
+        Define available angular velocity range here
+        :return: available angular velocity range, np.array([a, b])
+        """
         return np.array([-10 * self.w_r, 10 * self.w_r])
 
     @property
     def _acceleration_range(self):
+        """
+        Define available acceleration range here
+        :return: available acceleration range, np.array([a, b])
+        """
         return np.array([-self.__gravity_velocity, self.__gravity_velocity])
 
     @property
-    def desired_trace(self):
+    def desired_trace_artist(self):
+        """
+        Desired trace Artist for drawing
+        :return:
+        """
         return None
 
     @property
     def l_matrix(self):
+        """
+        Dynamically compute Laplacian matrix
+        :return: Laplacian matrix
+        """
         a_matrix = np.zeros((len(self.robots), len(self.robots)))
         d_matrix = np.zeros((len(self.robots), len(self.robots)))
         for (i, j), _ in np.ndenumerate(self.matrix):
@@ -48,12 +68,16 @@ class Controller:
         return self.matrix
 
     def speed_gen(self):
+        """
+        main control algorithm here, just override this
+        :return: dt(time increment step), speeds for all robots
+        """
         yield 0, [(0, 0, 0)] * len(self.robots)
 
     def speed_round(self, speeds_xy):
         """
         round transferred in speeds to valid range
-        :param speeds_xy: speeds to be round
+        :param speeds_xy: speeds (x, y) or speed_norm to be round
         :return: rounded speeds
         """
         if np.linalg.norm(speeds_xy) < self._speed_range[1]:
@@ -82,7 +106,7 @@ class CentralController(Controller):
         super().__init__(robots)
 
     @property
-    def desired_trace(self):
+    def desired_trace_artist(self):
         return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
     def speed_gen(self):
@@ -124,7 +148,7 @@ class DecentralizedController(Controller):
         return np.array([self.v_tilde2, self.v_tilde2 ** 2]).transpose()
 
     @property
-    def desired_trace(self):
+    def desired_trace_artist(self):
         return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
     def update_z(self):
@@ -168,7 +192,7 @@ class DecentralizedController(Controller):
             dt = 0.005
             for index, robot in enumerate(self.robots):
                 cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
-                                       robot.posture[0] - self.central_point[0])
+                                           robot.posture[0] - self.central_point[0])
                 visible_robots = robot.get_visible_robots(self.robots)
                 visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
                                                    visible_robots]

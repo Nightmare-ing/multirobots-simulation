@@ -16,16 +16,16 @@ class Simulation:
         self.ax.set_aspect('equal')
 
         # plot desired trace
-        self.ax.add_patch(self.controller.desired_trace)
+        self.ax.add_patch(self.controller.desired_trace_artist)
 
         # plot robot and visible region
         for robot in self.robots:
-            for region in robot.visible_region:
+            for region in robot.visible_region_artist:
                 self.ax.add_patch(region)
-            self.ax.add_patch(robot.robot_point)
+            self.ax.add_patch(robot.robot_point_artist)
 
-        return [region for robot in self.robots for region in robot.visible_region] + \
-            [robot.robot_point for robot in self.robots]
+        return [region for robot in self.robots for region in robot.visible_region_artist] + \
+            [robot.robot_point_artist for robot in self.robots]
 
     def update_scene(self, data):
         # update robot position with controller output
@@ -33,8 +33,8 @@ class Simulation:
         for robot, speed in zip(self.robots, speeds):
             robot.update(dt, speed)
 
-        return [region for robot in self.robots for region in robot.visible_region] + \
-            [robot.robot_point for robot in self.robots]
+        return [region for robot in self.robots for region in robot.visible_region_artist] + \
+            [robot.robot_point_artist for robot in self.robots]
 
     def show_animation(self):
         self.ani = animation.FuncAnimation(self.fig, self.update_scene, self.controller.speed_gen,

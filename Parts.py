@@ -33,44 +33,44 @@ class Robot:
 
         # some elems for drawing
         self.color = np.random.uniform(0, 0.6, 3)
-        self.point = patches.Circle((0, 0), 0.2, color=self.color)
-        self.entire_visible_region = patches.Wedge((0, 0),
-                                                   float(self.camera.visible_radius * self.camera.visible_range[1]),
-                                                   0, 0,
-                                                   edgecolor=self.color, linestyle='--',
-                                                   facecolor=self.color, alpha=0.3)
-        self.invisible_region = patches.Wedge((0, 0),
-                                              float(self.camera.visible_radius * self.camera.visible_range[0]),
-                                              0, 0,
-                                              facecolor=plt.gcf().get_facecolor())
+        self.point_artist = patches.Circle((0, 0), 0.2, color=self.color)
+        self.entire_visible_region_artist = patches.Wedge((0, 0),
+                                                          float(self.camera.visible_radius * self.camera.visible_range[1]),
+                                                          0, 0,
+                                                          edgecolor=self.color, linestyle='--',
+                                                          facecolor=self.color, alpha=0.3)
+        self.invisible_region_artist = patches.Wedge((0, 0),
+                                                     float(self.camera.visible_radius * self.camera.visible_range[0]),
+                                                     0, 0,
+                                                     facecolor=plt.gcf().get_facecolor())
 
     def update(self, dt, speed=(0, 0, 0)):
         self.posture = self.posture + (self.speed * dt)
         self.speed = np.array(speed)
 
     @property
-    def robot_point(self):
-        self.point.center = (float(self.posture[0]), float(self.posture[1]))
-        return self.point
+    def robot_point_artist(self):
+        self.point_artist.center = (float(self.posture[0]), float(self.posture[1]))
+        return self.point_artist
 
     @property
-    def visible_region(self):
+    def visible_region_artist(self):
         theta1 = math.degrees(self.posture[2] + self.camera_angle - self.camera.field_angle / 2)
         theta2 = math.degrees(self.posture[2] + self.camera_angle + self.camera.field_angle / 2)
         position = (float(self.posture[0]), float(self.posture[1]))
-        self.entire_visible_region.set_center(position)
-        self.entire_visible_region.set_theta1(theta1)
-        self.entire_visible_region.set_theta2(theta2)
-        self.invisible_region.set_center(position)
-        self.invisible_region.set_theta1(theta1)
-        self.invisible_region.set_theta2(theta2)
-        return self.entire_visible_region, self.invisible_region
+        self.entire_visible_region_artist.set_center(position)
+        self.entire_visible_region_artist.set_theta1(theta1)
+        self.entire_visible_region_artist.set_theta2(theta2)
+        self.invisible_region_artist.set_center(position)
+        self.invisible_region_artist.set_theta1(theta1)
+        self.invisible_region_artist.set_theta2(theta2)
+        return self.entire_visible_region_artist, self.invisible_region_artist
 
     def inspect(self, robot):
-        transformed_point = tuple[float, float](self.visible_region[0].get_transform().transform(robot.posture[:2]))
-        inside_entire_region = self.visible_region[0].contains_point(transformed_point)
-        transformed_point = tuple[float, float](self.visible_region[1].get_transform().transform(robot.posture[:2]))
-        inside_invisible_region = self.visible_region[1].contains_point(transformed_point)
+        transformed_point = tuple[float, float](self.visible_region_artist[0].get_transform().transform(robot.posture[:2]))
+        inside_entire_region = self.visible_region_artist[0].contains_point(transformed_point)
+        transformed_point = tuple[float, float](self.visible_region_artist[1].get_transform().transform(robot.posture[:2]))
+        inside_invisible_region = self.visible_region_artist[1].contains_point(transformed_point)
         return inside_entire_region and not inside_invisible_region
 
     def get_visible_robots(self, robots):
