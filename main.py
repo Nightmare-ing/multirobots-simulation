@@ -13,8 +13,8 @@ def main():
                                               (-5, 0, math.radians(-45)), (0, -5, math.radians(45))],
                                      speed=[(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)])
     fig, ax = plt.subplots()
-    # controller = DecentralizedController(robots)
-    controller = CentralController(robots)
+    controller = DecentralizedController(robots)
+    # controller = CentralController(robots)
     simulation_scene = Simulation(fig, ax, robots, controller)
     simulation_scene.show_animation()
     # simulation_scene.save_animation("test.mp4")

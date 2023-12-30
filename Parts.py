@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Camera:
-    def __init__(self, field_angle=np.pi / 2, visible_radius=6.0, visible_range=np.array([0.25, 2.0]),
+    def __init__(self, field_angle=np.pi / 2, visible_radius=4.0, visible_range=np.array([0.25, 2.0]),
                  rotate_speed=0.1):
         self.field_angle = field_angle
         self.visible_radius = visible_radius

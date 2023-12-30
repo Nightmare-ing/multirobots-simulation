@@ -110,6 +110,7 @@ class DecentralizedController(Controller):
     __k2 = 0.001
     __k3 = 0.1
     __sigma = 1
+    __k = 10
 
     def __init__(self, robots):
         super().__init__(robots)
@@ -166,25 +167,27 @@ class DecentralizedController(Controller):
             speeds = []
             dt = 0.005
             for index, robot in enumerate(self.robots):
-                cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
+                cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
                                        robot.posture[0] - self.central_point[0])
                 visible_robots = robot.get_visible_robots(self.robots)
                 visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
                                                    visible_robots]
+                distance = np.linalg.norm(robot.posture[:2] - self.central_point)
                 if visible_robots_index:
                     pj_vec = np.array([robot.posture[:2] for robot in visible_robots])
                     w_i = ((-self.l_matrix[index, visible_robots_index]
                             * (self.v_tilde2[index] - self.v_tilde2[visible_robots_index])) ** 2 *
                            np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
-                    rounded_w_i = self.speed_round(w_i * self.radius)
-                    rotate_speed = self.angular_vel_round(w_i / 100)
-                    speed = (-rounded_w_i * np.sin(cur_angle),
-                             rounded_w_i * np.cos(cur_angle),
-                             rotate_speed)
+                    speed_along_trace = self.speed_round(w_i * self.radius)
+                    rotate_speed = self.angular_vel_round(w_i / 400)
                     self.update_v_tilde2()
                 else:
-                    speed = (-self._speed_range[1] * np.sin(cur_angle), self._speed_range[0] * np.cos(cur_angle),
-                             self._angular_vel_range[1])
+                    speed_along_trace = self._speed_range[1]
+                    rotate_speed = self._angular_vel_range[1] / 10
+                speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.__k
+                speed = (-speed_along_trace * np.sin(cur_pos_angle) - speed_along_radius * np.cos(cur_pos_angle),
+                         speed_along_trace * np.cos(cur_pos_angle) - speed_along_radius * np.sin(cur_pos_angle),
+                         rotate_speed)
                 speeds.append(speed)
             # pdb.set_trace()
             yield dt, speeds
