@@ -76,6 +76,8 @@ class Controller:
 
 
 class CentralController(Controller):
+    __k = 100.0  # adjust param for controlling speed_along_radius
+
     def __init__(self, robots):
         super().__init__(robots)
 
@@ -88,13 +90,14 @@ class CentralController(Controller):
             speeds = []
             dt = 0.005
             for robot in self.robots:
-                cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
-                                       robot.posture[0] - self.central_point[0])
-                dist = np.linalg.norm(robot.posture[:2] - self.central_point)
-                dist_gen_x_speed = self.speed_round(-self._speed_range[1] * np.sign(dist - self.radius)) / 100
-                speed = (-self.w_r * self.radius * np.sin(cur_angle) + dist_gen_x_speed * np.cos(cur_angle),
-                         self.w_r * self.radius * np.cos(cur_angle) + dist_gen_x_speed * np.sin(cur_angle),
-                         0.0)
+                cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
+                                           robot.posture[0] - self.central_point[0])
+                speed_along_trace = self.w_r * self.radius
+                distance = np.linalg.norm(robot.posture[:2] - self.central_point)
+                speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.__k
+                speed = (-speed_along_trace * np.sin(cur_pos_angle) - speed_along_radius * np.cos(cur_pos_angle),
+                         speed_along_trace * np.cos(cur_pos_angle) - speed_along_radius * np.sin(cur_pos_angle),
+                         3.0)
                 speeds.append(speed)
             yield dt, speeds
 
