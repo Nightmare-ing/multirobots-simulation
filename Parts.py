@@ -79,10 +79,8 @@ class Robot:
         :param robots: robot inspecting
         :return: robots that self can see
         """
-        visible_robots = []
-        for other_robot in robots:
-            if other_robot is not self and self.inspect(other_robot):
-                visible_robots.append(other_robot)
+        visible_robots = [other_robot for other_robot in robots
+                          if other_robot is not self and self.inspect(other_robot)]
         return visible_robots
 
     def __str__(self):
