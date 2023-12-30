@@ -50,8 +50,7 @@ class CircularTraceController:
         """
         return None
 
-    @property
-    def l_matrix(self):
+    def update_l_matrix(self):
         """
         Dynamically compute Laplacian matrix
         :return: Laplacian matrix
@@ -66,7 +65,6 @@ class CircularTraceController:
             d_matrix[i, i] = a_matrix[i, :].sum()
 
         self.matrix = a_matrix - d_matrix
-        return self.matrix
 
     def speed_adjust(self, robot, speed_along_trace, angle):
         """
@@ -143,7 +141,8 @@ class DecentralizedController(CircularTraceController):
     __k1 = 0.1  # param for computing dv_tilde2_i
     __k2 = 0.001  # param for computing dv_tilde2_i
     __k3 = 0.1  # param for computing dv_tilde2_i
-    __sigma = 1  # param for computing d_tilde_lambda / d position
+    __sigma = 1.0  # param for computing d_tilde_lambda / d position
+    __k = 100.0  # param for adjusting rotating speed
 
     def __init__(self, robots):
         super().__init__(robots)
@@ -168,13 +167,10 @@ class DecentralizedController(CircularTraceController):
         """
         return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
-    @property
-    def z(self) -> np.ndarray:
+    def update_z(self):
         """
         Compute and update z vector, namely the Ave({v_tilde2, v_tilde2 ** 2})
-        :return: z vector
         """
-        return_result = self.z_mat
         for index, robot in enumerate(self.robots):
             visible_robots_index = [visible_robot.robot_id for visible_robot in
                                     robot.get_visible_robots(self.robots)]
@@ -185,25 +181,21 @@ class DecentralizedController(CircularTraceController):
                     self.__ki * sum_wi_minus_wj)
             self.w_mat[index] += dw_i
             self.z_mat[index] += dz_i
-        return return_result
 
-    @property
-    def v_tilde(self) -> np.ndarray:
+    def update_v_tilde(self):
         """
         Compute and update the eigen vector(self.v_tilde2) estimation of robot i
-        :return: v_tilde2 vector
         """
-        return_result = self.v_tilde2_vec
         for index, robot in enumerate(self.robots):
             visible_robots_index = [visible_robot.robot_id for visible_robot in
                                     robot.get_visible_robots(self.robots)]
-            sum_aij_times_v2i_minus_v2j = ((self.l_matrix[index, visible_robots_index] *
+            sum_aij_times_v2i_minus_v2j = ((self.matrix[index, visible_robots_index] *
                                             (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index]))
                                            .sum(axis=0))
-            dv_tilde2_i = (-self.__k1 * self.z[index, 0] - self.__k2 * sum_aij_times_v2i_minus_v2j - self.__k3 *
-                           (self.z[index, 1] - 1) * self.v_tilde2_vec[index])
+            dv_tilde2_i = (-self.__k1 * self.z_mat[index, 0] - self.__k2 * sum_aij_times_v2i_minus_v2j - self.__k3 *
+                           (self.z_mat[index, 1] - 1) * self.v_tilde2_vec[index])
             self.v_tilde2_vec[index] += dv_tilde2_i
-        return return_result
+            self.update_z()
 
     @property
     def lambda2_tilde(self):
@@ -224,14 +216,16 @@ class DecentralizedController(CircularTraceController):
                                                    robot.get_visible_robots(self.robots)]
                 if visible_robots_index:
                     pj_vec = np.array([self.robots[i].posture[:2] for i in visible_robots_index])
-                    u = ((-self.l_matrix[index, visible_robots_index]
-                          * (self.v_tilde[index] - self.v_tilde[visible_robots_index])) ** 2 *
+                    u = ((-self.matrix[index, visible_robots_index]
+                          * (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index])) ** 2 *
                          np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
                     speed_along_trace = self.speed_round(u)
-                    rotate_speed = self.angular_vel_round(u / self.radius / 50.0)
+                    rotate_speed = self.angular_vel_round(u / self.radius) / self.__k
                 else:
                     speed_along_trace = self._speed_range[1]
-                    rotate_speed = np.average(self._angular_vel_range)
+                    rotate_speed = self._angular_vel_range[1]
                 speed = self.speed_adjust(robot, speed_along_trace, cur_pos_angle) + (rotate_speed,)
                 speeds.append(speed)
+            self.update_v_tilde()
+            self.update_l_matrix()
             yield dt, speeds
