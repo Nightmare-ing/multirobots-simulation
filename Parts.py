@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Camera:
-    def __init__(self, field_angle=np.pi / 2, visible_radius=4.0, visible_range=np.array([0.25, 2.0]),
+    def __init__(self, field_angle=np.pi / 2, visible_radius=5.0, visible_range=np.array([0.25, 2.0]),
                  rotate_speed=0.1):
         self.field_angle = field_angle
         self.visible_radius = visible_radius
@@ -35,7 +35,8 @@ class Robot:
         self.color = np.random.uniform(0, 0.6, 3)
         self.point_artist = patches.Circle((0, 0), 0.2, color=self.color)
         self.entire_visible_region_artist = patches.Wedge((0, 0),
-                                                          float(self.camera.visible_radius * self.camera.visible_range[1]),
+                                                          float(self.camera.visible_radius * self.camera.visible_range[
+                                                              1]),
                                                           0, 0,
                                                           edgecolor=self.color, linestyle='--',
                                                           facecolor=self.color, alpha=0.3)
@@ -67,9 +68,11 @@ class Robot:
         return self.entire_visible_region_artist, self.invisible_region_artist
 
     def inspect(self, robot):
-        transformed_point = tuple[float, float](self.visible_region_artist[0].get_transform().transform(robot.posture[:2]))
+        transformed_point = tuple[float, float](
+            self.visible_region_artist[0].get_transform().transform(robot.posture[:2]))
         inside_entire_region = self.visible_region_artist[0].contains_point(transformed_point)
-        transformed_point = tuple[float, float](self.visible_region_artist[1].get_transform().transform(robot.posture[:2]))
+        transformed_point = tuple[float, float](
+            self.visible_region_artist[1].get_transform().transform(robot.posture[:2]))
         inside_invisible_region = self.visible_region_artist[1].contains_point(transformed_point)
         return inside_entire_region and not inside_invisible_region
 
@@ -85,3 +88,19 @@ class Robot:
 
     def __str__(self):
         return f"Robot {self.robot_id}- Position: {self.posture}"
+
+
+class OnlySeeFarthestOneRobot(Robot):
+    def __init__(self, initial_posture=(0, 0, 0), speed=(0, 0, 0), camera=Camera(), camera_angle=0.0):
+        super().__init__(initial_posture, speed, camera, camera_angle)
+
+    def get_visible_robots(self, robots):
+        """
+        get the robots that self can see
+        :param robots: robot inspecting
+        :return: robots that self can see
+        """
+        visible_robots = [other_robot for other_robot in robots
+                          if other_robot is not self and self.inspect(other_robot)]
+        closest_robot = max(visible_robots, key=lambda robot: np.linalg.norm(robot.posture[:2] - self.posture[:2]))
+        return closest_robot

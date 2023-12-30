@@ -228,4 +228,5 @@ class DecentralizedController(CircularTraceController):
                 speeds.append(speed)
             self.update_v_tilde()
             self.update_l_matrix()
+            print(self.lambda2_tilde)
             yield dt, speeds
