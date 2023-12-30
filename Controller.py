@@ -206,25 +206,26 @@ class DecentralizedController(CircularTraceController):
         return self.__k3 / self.__k2 * (1 - self.z_mat[:, 0])
 
     def speed_gen(self):
-        speeds = []
-        dt = 0.005
-        for index, robot in enumerate(self.robots):
-            cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
-                                       robot.posture[0] - self.central_point[0])
-            visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
-                                               robot.get_visible_robots(self.robots)]
-            if visible_robots_index:
-                pj_vec = np.array([self.robots[i].posture[:2] for i in visible_robots_index])
-                u = ((-self.matrix[index, visible_robots_index]
-                      * (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index])) ** 2 *
-                     np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
-                speed_along_trace = self.speed_round(u)
-                rotate_speed = self.angular_vel_round(u / self.radius) / self.__k
-            else:
-                speed_along_trace = self._speed_range[1]
-                rotate_speed = self._angular_vel_range[1]
-            speed = self.speed_adjust(robot, speed_along_trace, cur_pos_angle) + (rotate_speed,)
-            speeds.append(speed)
-        self.update_v_tilde()
-        self.update_l_matrix()
-        yield dt, speeds
+        for _ in itertools.count():
+            speeds = []
+            dt = 0.005
+            for index, robot in enumerate(self.robots):
+                cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
+                                           robot.posture[0] - self.central_point[0])
+                visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
+                                                   robot.get_visible_robots(self.robots)]
+                if visible_robots_index:
+                    pj_vec = np.array([self.robots[i].posture[:2] for i in visible_robots_index])
+                    u = ((-self.matrix[index, visible_robots_index]
+                          * (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index])) ** 2 *
+                         np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
+                    speed_along_trace = self.speed_round(u)
+                    rotate_speed = self.angular_vel_round(u / self.radius) / self.__k
+                else:
+                    speed_along_trace = self._speed_range[1]
+                    rotate_speed = self._angular_vel_range[1]
+                speed = self.speed_adjust(robot, speed_along_trace, cur_pos_angle) + (rotate_speed,)
+                speeds.append(speed)
+            self.update_v_tilde()
+            self.update_l_matrix()
+            yield dt, speeds
