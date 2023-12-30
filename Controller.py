@@ -7,8 +7,9 @@ import itertools
 import pdb
 
 
-class Controller:
+class CircularTraceController:
     __gravity_velocity = 9.81
+    __k = 100.0  # adjust param for controlling speed_along_radius
 
     def __init__(self, robots):
         self.radius = 5.0  # radius of the desired trace
@@ -67,16 +68,31 @@ class Controller:
         self.matrix = a_matrix - d_matrix
         return self.matrix
 
+    def speed_adjust(self, robot, speed_along_trace, angle):
+        """
+        Adjust speed_xy to control robot to move along the desired trace without offset.
+        You can modify this to use your own control algorithm to move along the desired trace.
+        :param angle: cur pos angle in the trace
+        :param robot: robot to compute
+        :param speed_along_trace: speed along trace
+        :return: speed along radius
+        """
+        distance = np.linalg.norm(robot.posture[:2] - self.central_point)
+        speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.__k
+        speed_xy = (-speed_along_trace * np.sin(angle) - speed_along_radius * np.cos(angle),
+                    speed_along_trace * np.cos(angle) - speed_along_radius * np.sin(angle))
+        return speed_xy
+
     def speed_gen(self):
         """
-        main control algorithm here, just override this
+        Main control algorithm here, just override this
         :return: dt(time increment step), speeds for all robots
         """
         yield 0, [(0, 0, 0)] * len(self.robots)
 
     def speed_round(self, speeds_xy):
         """
-        round transferred in speeds to valid range
+        Round transferred in speeds to valid range
         :param speeds_xy: speeds (x, y) or speed_norm to be round
         :return: rounded speeds
         """
@@ -87,7 +103,7 @@ class Controller:
 
     def angular_vel_round(self, angular_vel):
         """
-        round transferred in angular velocity to valid range
+        Round transferred in angular velocity to valid range
         :param angular_vel: angular velocity to be round
         :return: rounded angular velocity
         """
@@ -99,9 +115,7 @@ class Controller:
             return angular_vel
 
 
-class CentralController(Controller):
-    __k = 100.0  # adjust param for controlling speed_along_radius
-
+class CentralController(CircularTraceController):
     def __init__(self, robots):
         super().__init__(robots)
 
@@ -117,24 +131,19 @@ class CentralController(Controller):
                 cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
                                            robot.posture[0] - self.central_point[0])
                 speed_along_trace = self.w_r * self.radius
-                distance = np.linalg.norm(robot.posture[:2] - self.central_point)
-                speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.__k
-                speed = (-speed_along_trace * np.sin(cur_pos_angle) - speed_along_radius * np.cos(cur_pos_angle),
-                         speed_along_trace * np.cos(cur_pos_angle) - speed_along_radius * np.sin(cur_pos_angle),
-                         3.0)
+                speed = self.speed_adjust(robot, speed_along_trace, cur_pos_angle) + (self._angular_vel_range[1],)
                 speeds.append(speed)
             yield dt, speeds
 
 
-class DecentralizedController(Controller):
-    __gama = 0.1
-    __kp = 0.1
-    __ki = 0.1
-    __k1 = 0.1
-    __k2 = 0.001
-    __k3 = 0.1
-    __sigma = 1
-    __k = 10
+class DecentralizedController(CircularTraceController):
+    __gama = 0.1  # param for computing dz_i
+    __kp = 0.1  # param for computing dz_i
+    __ki = 0.1  # param for computing dw_i
+    __k1 = 0.1  # param for computing dv_tilde2_i
+    __k2 = 0.001  # param for computing dv_tilde2_i
+    __k3 = 0.1  # param for computing dv_tilde2_i
+    __sigma = 1  # param for computing d_tilde_lambda / d position
 
     def __init__(self, robots):
         super().__init__(robots)
@@ -153,7 +162,7 @@ class DecentralizedController(Controller):
 
     def update_z(self):
         """
-        compute and update the average of eigen vector estimation of robot i
+        Compute and update the average of eigen vector estimation of robot i
         """
         for index, robot in enumerate(self.robots):
             visible_robots_index = [visible_robot.robot_id for visible_robot in
@@ -168,7 +177,7 @@ class DecentralizedController(Controller):
 
     def update_v_tilde2(self):
         """
-        compute and update the eigen vector(self.v_tilde2) estimation of robot i
+        Compute and update the eigen vector(self.v_tilde2) estimation of robot i
         """
         for index, robot in enumerate(self.robots):
             visible_robots_index = [visible_robot.robot_id for visible_robot in
@@ -196,7 +205,6 @@ class DecentralizedController(Controller):
                 visible_robots = robot.get_visible_robots(self.robots)
                 visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
                                                    visible_robots]
-                distance = np.linalg.norm(robot.posture[:2] - self.central_point)
                 if visible_robots_index:
                     pj_vec = np.array([robot.posture[:2] for robot in visible_robots])
                     w_i = ((-self.l_matrix[index, visible_robots_index]
@@ -208,10 +216,7 @@ class DecentralizedController(Controller):
                 else:
                     speed_along_trace = self._speed_range[1]
                     rotate_speed = self._angular_vel_range[1] / 5
-                speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.__k
-                speed = (-speed_along_trace * np.sin(cur_pos_angle) - speed_along_radius * np.cos(cur_pos_angle),
-                         speed_along_trace * np.cos(cur_pos_angle) - speed_along_radius * np.sin(cur_pos_angle),
-                         rotate_speed)
+                speed = self.speed_adjust(robot, speed_along_trace, cur_pos_angle) + (rotate_speed,)
                 speeds.append(speed)
             # pdb.set_trace()
             yield dt, speeds
