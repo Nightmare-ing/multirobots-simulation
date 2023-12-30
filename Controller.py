@@ -91,9 +91,9 @@ class CentralController(Controller):
                 cur_angle = np.arctan2(robot.posture[1] - self.central_point[1],
                                        robot.posture[0] - self.central_point[0])
                 dist = np.linalg.norm(robot.posture[:2] - self.central_point)
-                dist_gen_x_speed = self.speed_round(-self._speed_range[1] * (dist - self.radius))
-                speed = (-self.w_r * self.radius * np.sin(cur_angle) + dist_gen_x_speed * np.sin(cur_angle),
-                         self.w_r * self.radius * np.cos(cur_angle) + dist_gen_x_speed * np.cos(cur_angle),
+                dist_gen_x_speed = self.speed_round(-self._speed_range[1] * np.sign(dist - self.radius)) / 100
+                speed = (-self.w_r * self.radius * np.sin(cur_angle) + dist_gen_x_speed * np.cos(cur_angle),
+                         self.w_r * self.radius * np.cos(cur_angle) + dist_gen_x_speed * np.sin(cur_angle),
                          0.0)
                 speeds.append(speed)
             yield dt, speeds
