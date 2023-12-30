@@ -203,11 +203,11 @@ class DecentralizedController(Controller):
                             * (self.v_tilde2[index] - self.v_tilde2[visible_robots_index])) ** 2 *
                            np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
                     speed_along_trace = self.speed_round(w_i * self.radius)
-                    rotate_speed = self.angular_vel_round(w_i / 400)
+                    rotate_speed = self.angular_vel_round(w_i / 800)
                     self.update_v_tilde2()
                 else:
                     speed_along_trace = self._speed_range[1]
-                    rotate_speed = self._angular_vel_range[1] / 10
+                    rotate_speed = self._angular_vel_range[1] / 5
                 speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.__k
                 speed = (-speed_along_trace * np.sin(cur_pos_angle) - speed_along_radius * np.cos(cur_pos_angle),
                          speed_along_trace * np.cos(cur_pos_angle) - speed_along_radius * np.sin(cur_pos_angle),
