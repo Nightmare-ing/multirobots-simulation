@@ -104,3 +104,12 @@ class OnlySeeFarthestOneRobot(Robot):
                           if other_robot is not self and self.inspect(other_robot)]
         closest_robot = max(visible_robots, key=lambda robot: np.linalg.norm(robot.posture[:2] - self.posture[:2]))
         return closest_robot
+
+
+class DoubleIntegralOnlySeeFarthestOneRobot(OnlySeeFarthestOneRobot):
+    def __init__(self, initial_posture=(0, 0, 0), speed=(0, 0, 0), camera=Camera(), camera_angle=0.0):
+        super().__init__(initial_posture, speed, camera, camera_angle)
+
+    def update(self, dt, acceleration=(0, 0, 0)):
+        self.speed = self.speed + (acceleration * dt)
+        self.posture = self.posture + (self.speed * dt)

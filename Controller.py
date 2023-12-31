@@ -130,6 +130,17 @@ class CircularTraceController:
         else:
             return angular_vel
 
+    def acceleration_round(self, acceleration_xy):
+        """
+        Round transferred in acceleration to valid range
+        :param acceleration_xy: acceleration (x, y) to be round
+        :return: rounded acceleration
+        """
+        if np.linalg.norm(acceleration_xy) < self._acceleration_range[1]:
+            return acceleration_xy
+        else:
+            return acceleration_xy / np.linalg.norm(acceleration_xy) * self._acceleration_range[1]
+
 
 class CentralController(CircularTraceController):
     def __init__(self, robots):
@@ -252,8 +263,22 @@ class DecentralizedController(CircularTraceController):
             speeds.append(speed)
         return speeds
 
-            self.adjust_ave(speeds)
+
+class DoubleIntegralController(DecentralizedController):
+    __k_acc = 0.9
+
+    def __init__(self, robots):
+        super().__init__(robots)
+
+    def speed_gen(self):
+        for _ in itertools.count():
+            dt = 0.005
+            control_speeds = self.speeds_to_maintain_connection()
+            cur_speeds = [robot.speed for robot in self.robots]
+            self.adjust_ave(control_speeds)
+            acceleration = [(speed - cur_speed) * self.__k_acc for speed, cur_speed in zip(control_speeds, cur_speeds)]
+            acceleration = [self.acceleration_round(acc) for acc in acceleration]
             self.update_v_tilde()
             self.update_l_matrix()
             print(self.lambda2_tilde)
-            yield dt, speeds
+            yield dt, acceleration
