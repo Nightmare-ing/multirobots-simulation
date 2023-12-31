@@ -1,15 +1,11 @@
-import math
-from typing import List, Any
-
 import matplotlib.patches as patches
 import numpy as np
 import itertools
-import pdb
 
 
 class CircularTraceController:
     __gravity_velocity = 9.81
-    __k = 100.0  # adjust param for controlling speed_along_radius
+    k = 100.0  # adjust param for controlling speed_along_radius
 
     def __init__(self, robots):
         self.radius = 5.0  # radius of the desired trace
@@ -77,7 +73,7 @@ class CircularTraceController:
         cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
                                    robot.posture[0] - self.central_point[0])
         distance = np.linalg.norm(robot.posture[:2] - self.central_point)
-        speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.__k
+        speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.k
         speed_xy = (-speed_along_trace * np.sin(cur_pos_angle) - speed_along_radius * np.cos(cur_pos_angle),
                     speed_along_trace * np.cos(cur_pos_angle) - speed_along_radius * np.sin(cur_pos_angle))
         return speed_xy
@@ -164,14 +160,14 @@ class CentralController(CircularTraceController):
 
 
 class DecentralizedController(CircularTraceController):
-    __gama = 0.1  # param for computing dz_i
-    __kp = 0.1  # param for computing dz_i
-    __ki = 0.1  # param for computing dw_i
-    __k1 = 0.1  # param for computing dv_tilde2_i
-    __k2 = 0.001  # param for computing dv_tilde2_i
-    __k3 = 0.1  # param for computing dv_tilde2_i
-    __sigma = 1.0  # param for computing d_tilde_lambda / d position
-    __k = 1.0  # param for adjusting rotating speed
+    gama = 0.1  # param for computing dz_i
+    kp = 0.1  # param for computing dz_i
+    ki = 0.1  # param for computing dw_i
+    k1 = 0.1  # param for computing dv_tilde2_i
+    k2 = 0.001  # param for computing dv_tilde2_i
+    k3 = 0.1  # param for computing dv_tilde2_i
+    sigma = 1.0  # param for computing d_tilde_lambda / d position
+    k = 1.0  # param for adjusting rotating speed
 
     def __init__(self, robots):
         super().__init__(robots)
@@ -205,9 +201,9 @@ class DecentralizedController(CircularTraceController):
                                     robot.get_visible_robots(self.robots)]
             sum_zi_minus_zj = (self.z_mat[index] - self.z_mat[visible_robots_index]).sum(axis=0)
             sum_wi_minus_wj = (self.w_mat[index] - self.w_mat[visible_robots_index]).sum(axis=0)
-            dw_i = -self.__ki * sum_zi_minus_zj
-            dz_i = (self.__gama * (self.alpha[index] - self.z_mat[index]) - self.__kp * sum_zi_minus_zj +
-                    self.__ki * sum_wi_minus_wj)
+            dw_i = -self.ki * sum_zi_minus_zj
+            dz_i = (self.gama * (self.alpha[index] - self.z_mat[index]) - self.kp * sum_zi_minus_zj +
+                    self.ki * sum_wi_minus_wj)
             self.w_mat[index] += dw_i
             self.z_mat[index] += dz_i
 
@@ -221,7 +217,7 @@ class DecentralizedController(CircularTraceController):
             sum_aij_times_v2i_minus_v2j = ((self.matrix[index, visible_robots_index] *
                                             (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index]))
                                            .sum(axis=0))
-            dv_tilde2_i = (-self.__k1 * self.z_mat[index, 0] - self.__k2 * sum_aij_times_v2i_minus_v2j - self.__k3 *
+            dv_tilde2_i = (-self.k1 * self.z_mat[index, 0] - self.k2 * sum_aij_times_v2i_minus_v2j - self.k3 *
                            (self.z_mat[index, 1] - 1) * self.v_tilde2_vec[index])
             self.v_tilde2_vec[index] += dv_tilde2_i
             self.update_z()
@@ -232,7 +228,7 @@ class DecentralizedController(CircularTraceController):
         Get lambda2_tilde, namely estimation of the second smallest eigen value of Laplacian matrix
         :return: lambda2_tilde
         """
-        return self.__k3 / self.__k2 * (1 - self.z_mat[:, 0])
+        return self.k3 / self.k2 * (1 - self.z_mat[:, 0])
 
     def speed_gen(self):
         for _ in itertools.count():
@@ -253,9 +249,9 @@ class DecentralizedController(CircularTraceController):
                 pj_vec = np.array([self.robots[i].posture[:2] for i in visible_robots_index])
                 u = ((-self.matrix[index, visible_robots_index]
                       * (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index])) ** 2 *
-                     np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
+                     np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.sigma ** 2).sum()
                 speed_along_trace = self.speed_round(u)
-                rotate_speed = self.angular_vel_round(u / self.radius) / self.__k
+                rotate_speed = self.angular_vel_round(u / self.radius) / self.k
             else:
                 speed_along_trace = self._speed_range[1]
                 rotate_speed = self._angular_vel_range[1]
@@ -282,3 +278,33 @@ class DoubleIntegralController(DecentralizedController):
             self.update_l_matrix()
             print(f"Estimation of lambda_tilde of double integral Controller: {self.lambda2_tilde}")
             yield dt, acceleration
+
+
+class EclipseTraceController(DecentralizedController):
+    def __init__(self, robots):
+        super().__init__(robots)
+        self.a_radius = 5.0
+        self.b_radius = 2.0
+
+    @property
+    def desired_trace_artist(self):
+        return patches.Ellipse(self.central_point, self.a_radius * 2, self.b_radius * 2, color='cyan', fill=False)
+
+    def speed_adjust(self, robot, speed_along_trace):
+        """
+        Adjust speed_xy to control robot to move along the desired trace without offset.
+        You can modify this to use your own control algorithm to move along the desired trace.
+        :param robot: robot to compute
+        :param speed_along_trace: speed along trace
+        :return: speed along radius
+        """
+        cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
+                                   robot.posture[0] - self.central_point[0])
+        distance = np.linalg.norm(robot.posture[:2] - self.central_point)
+        eclipse_radius = self.a_radius * self.b_radius / np.sqrt(
+            (self.a_radius * np.sin(cur_pos_angle)) ** 2 + (self.b_radius * np.cos(cur_pos_angle)) ** 2)
+        speed_along_radius = np.sign(distance - eclipse_radius) * speed_along_trace / self.k
+        speed_xy = (-speed_along_trace * np.sin(cur_pos_angle) - speed_along_radius * np.cos(cur_pos_angle),
+                    self.b_radius / self.a_radius * (
+                            speed_along_trace * np.cos(cur_pos_angle) - speed_along_radius * np.sin(cur_pos_angle)))
+        return speed_xy
