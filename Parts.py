@@ -19,6 +19,7 @@ class Robot:
 
     @staticmethod
     def initialize_robots(num_robots, posture, speed):
+        Robot.robot_num = 0
         robots = [Robot(initial_posture=posture[i], speed=speed[i]) for i in range(num_robots)]
         return robots
 
