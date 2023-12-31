@@ -66,20 +66,38 @@ class CircularTraceController:
 
         self.matrix = a_matrix - d_matrix
 
-    def speed_adjust(self, robot, speed_along_trace, angle):
+    def speed_adjust(self, robot, speed_along_trace):
         """
         Adjust speed_xy to control robot to move along the desired trace without offset.
         You can modify this to use your own control algorithm to move along the desired trace.
-        :param angle: cur pos angle in the trace
         :param robot: robot to compute
         :param speed_along_trace: speed along trace
         :return: speed along radius
         """
+        cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
+                                   robot.posture[0] - self.central_point[0])
         distance = np.linalg.norm(robot.posture[:2] - self.central_point)
         speed_along_radius = np.sign(distance - self.radius) * speed_along_trace / self.__k
-        speed_xy = (-speed_along_trace * np.sin(angle) - speed_along_radius * np.cos(angle),
-                    speed_along_trace * np.cos(angle) - speed_along_radius * np.sin(angle))
+        speed_xy = (-speed_along_trace * np.sin(cur_pos_angle) - speed_along_radius * np.cos(cur_pos_angle),
+                    speed_along_trace * np.cos(cur_pos_angle) - speed_along_radius * np.sin(cur_pos_angle))
         return speed_xy
+
+    def adjust_ave(self, speeds):
+        """
+        Adjust all speeds so that the average angular velocity along the trace is w_r,
+        the elem of speeds is [(speed_x, speed_y, rotate_speed), ...]
+        :param speeds: speeds to adjust
+        :return: adjusted speeds
+        """
+        speeds_np = np.array(speeds)
+        speed_norm = np.linalg.norm(speeds_np[:, :2], axis=1)
+        cur_ave = speed_norm.mean()
+        speed_norm_adjusted = speed_norm - cur_ave + self.w_r * self.radius
+        for index, (speed_x, speed_y, rotate_speed) in enumerate(speeds):
+            angle = np.arctan2(speed_y, speed_x)
+            speed_x_adjusted = speed_norm_adjusted[index] * np.cos(angle)
+            speed_y_adjusted = speed_norm_adjusted[index] * np.sin(angle)
+            speeds[index] = (speed_x_adjusted, speed_y_adjusted, rotate_speed)
 
     def speed_gen(self):
         """
@@ -129,7 +147,7 @@ class CentralController(CircularTraceController):
                 cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
                                            robot.posture[0] - self.central_point[0])
                 speed_along_trace = self.w_r * self.radius
-                speed = self.speed_adjust(robot, speed_along_trace, cur_pos_angle) + (self._angular_vel_range[1],)
+                speed = self.speed_adjust(robot, speed_along_trace) + (self._angular_vel_range[1],)
                 speeds.append(speed)
             yield dt, speeds
 
@@ -142,7 +160,7 @@ class DecentralizedController(CircularTraceController):
     __k2 = 0.001  # param for computing dv_tilde2_i
     __k3 = 0.1  # param for computing dv_tilde2_i
     __sigma = 1.0  # param for computing d_tilde_lambda / d position
-    __k = 100.0  # param for adjusting rotating speed
+    __k = 10.0  # param for adjusting rotating speed
 
     def __init__(self, robots):
         super().__init__(robots)
@@ -207,11 +225,9 @@ class DecentralizedController(CircularTraceController):
 
     def speed_gen(self):
         for _ in itertools.count():
-            speeds = []
+            speeds = []  # [(speed_along_trace, rotate_speed), ...]
             dt = 0.005
             for index, robot in enumerate(self.robots):
-                cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
-                                           robot.posture[0] - self.central_point[0])
                 visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
                                                    robot.get_visible_robots(self.robots)]
                 if visible_robots_index:
@@ -224,8 +240,10 @@ class DecentralizedController(CircularTraceController):
                 else:
                     speed_along_trace = self._speed_range[1]
                     rotate_speed = self._angular_vel_range[1]
-                speed = self.speed_adjust(robot, speed_along_trace, cur_pos_angle) + (rotate_speed,)
+                speed = self.speed_adjust(robot, speed_along_trace) + (rotate_speed,)
                 speeds.append(speed)
+
+            self.adjust_ave(speeds)
             self.update_v_tilde()
             self.update_l_matrix()
             print(self.lambda2_tilde)
