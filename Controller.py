@@ -160,7 +160,7 @@ class DecentralizedController(CircularTraceController):
     __k2 = 0.001  # param for computing dv_tilde2_i
     __k3 = 0.1  # param for computing dv_tilde2_i
     __sigma = 1.0  # param for computing d_tilde_lambda / d position
-    __k = 10.0  # param for adjusting rotating speed
+    __k = 1.0  # param for adjusting rotating speed
 
     def __init__(self, robots):
         super().__init__(robots)
@@ -225,23 +225,32 @@ class DecentralizedController(CircularTraceController):
 
     def speed_gen(self):
         for _ in itertools.count():
-            speeds = []  # [(speed_along_trace, rotate_speed), ...]
             dt = 0.005
-            for index, robot in enumerate(self.robots):
-                visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
-                                                   robot.get_visible_robots(self.robots)]
-                if visible_robots_index:
-                    pj_vec = np.array([self.robots[i].posture[:2] for i in visible_robots_index])
-                    u = ((-self.matrix[index, visible_robots_index]
-                          * (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index])) ** 2 *
-                         np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
-                    speed_along_trace = self.speed_round(u)
-                    rotate_speed = self.angular_vel_round(u / self.radius) / self.__k
-                else:
-                    speed_along_trace = self._speed_range[1]
-                    rotate_speed = self._angular_vel_range[1]
-                speed = self.speed_adjust(robot, speed_along_trace) + (rotate_speed,)
-                speeds.append(speed)
+            control_speeds = self.speeds_to_maintain_connection()
+            self.adjust_ave(control_speeds)
+            self.update_v_tilde()
+            self.update_l_matrix()
+            print(self.lambda2_tilde)
+            yield dt, control_speeds
+
+    def speeds_to_maintain_connection(self):
+        speeds = []  # [(speed_along_trace, rotate_speed), ...]
+        for index, robot in enumerate(self.robots):
+            visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
+                                               robot.get_visible_robots(self.robots)]
+            if visible_robots_index:
+                pj_vec = np.array([self.robots[i].posture[:2] for i in visible_robots_index])
+                u = ((-self.matrix[index, visible_robots_index]
+                      * (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index])) ** 2 *
+                     np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.__sigma ** 2).sum()
+                speed_along_trace = self.speed_round(u)
+                rotate_speed = self.angular_vel_round(u / self.radius) / self.__k
+            else:
+                speed_along_trace = self._speed_range[1]
+                rotate_speed = self._angular_vel_range[1]
+            speed = self.speed_adjust(robot, speed_along_trace) + (rotate_speed,)
+            speeds.append(speed)
+        return speeds
 
             self.adjust_ave(speeds)
             self.update_v_tilde()
