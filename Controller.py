@@ -59,7 +59,7 @@ class CircularTraceController:
         d_matrix = np.zeros((len(self.robots), len(self.robots)))
         for (i, j), _ in np.ndenumerate(self.matrix):
             if self.robots[i].inspect(self.robots[j]):
-                a_matrix[i, j] = np.linalg.norm(self.robots[i].posture[:2] - self.robots[j].posture[:2])
+                a_matrix[i, j] = np.exp(-np.linalg.norm(self.robots[i].posture[:2] - self.robots[j].posture[:2]))
 
         for i in range(len(self.robots)):
             d_matrix[i, i] = a_matrix[i, :].sum()
