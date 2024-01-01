@@ -7,47 +7,45 @@ from Controller import CentralController, DecentralizedController, DoubleIntegra
 from Simulation import Simulation
 
 
-def main():
-    robots2 = DoubleIntegralOnlySeeFarthestOneRobot.initialize_robots(4,
-                                                                      posture=[(5, 0, math.radians(135)),
-                                                                               (0, 5, math.radians(225)),
-                                                                               (-5, 0, math.radians(-45)),
-                                                                               (0, -5, math.radians(45))],
-                                                                      speed=[(0, 1, 0), (-1, 0, 0), (0, -1, 0),
-                                                                             (1, 0, 0)])
-    robots1 = OnlySeeFarthestOneRobot.initialize_robots(4,
-                                                        posture=[
-                                                            (5 * math.cos(math.pi / 6.0), 5 * math.sin(math.pi / 6.0),
-                                                             math.radians(90)),
-                                                            (5 * math.cos(math.pi / 3.0), 5 * math.sin(math.pi / 3.0),
-                                                             math.radians(120)),
-                                                            (5 * math.cos(math.pi / 2.0), 5 * math.sin(math.pi / 2.0),
-                                                             math.radians(150)),
-                                                            (5 * math.cos(math.pi / 1.5), 5 * math.sin(math.pi / 1.5),
-                                                             math.radians(180))],
-                                                        speed=[(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)])
-    robots = OnlySeeFarthestOneRobot.initialize_robots(4,
-                                                       posture=[(5, 0, math.radians(135)),
-                                                                (0, 5, math.radians(225)),
-                                                                (-5, 0, math.radians(-45)),
-                                                                (0, -5, math.radians(45))],
-                                                       speed=[(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)])
-    fig, ax = plt.subplots()
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
+def equal_space_posture(num_robots, radius=5.0):
+    interval_angle = 2 * math.pi / num_robots
+    start_angle = math.radians(90) + interval_angle / 2
+    return [(radius * math.cos(start_angle + i * interval_angle), radius * math.sin(start_angle + i * interval_angle),
+             math.radians(90) + i * interval_angle) for i in range(num_robots)]
 
-    controller1 = DecentralizedController(robots1)
-    simulation_scene1 = Simulation(fig1, ax1, robots1, controller1)
-    simulation_scene1.show_animation()
+
+def link_posture(num_robots, radius=5.0):
+    interval_angle = 2 * math.pi / num_robots / 1.5
+    start_angle = math.radians(90) + interval_angle / 2
+    return [(radius * math.cos(start_angle + i * interval_angle), radius * math.sin(start_angle + i * interval_angle),
+             math.radians(90) + i * interval_angle) for i in range(num_robots)]
+
+
+def main():
+    robots_equal_spaced = OnlySeeFarthestOneRobot.initialize_robots(4, equal_space_posture(4),
+                                                                    speeds=[(0, 0, 0)] * 4)
+    robots_link = OnlySeeFarthestOneRobot.initialize_robots(4, link_posture(4),
+                                                            speeds=[(0, 0, 0)] * 4)
+    robots_equal_spaced1 = DoubleIntegralOnlySeeFarthestOneRobot.initialize_robots(4, equal_space_posture(4),
+                                                                                   speeds=[(0, 0, 0)] * 4)
+
+    # dec means decentralized, cen means centralized
+    fig_dec_circle, ax_dec_circle = plt.subplots()
+    fig_dec_link, ax_dec = plt.subplots()
+    fig_dec_eclipse, ax_dec_eclipse = plt.subplots()
+
+    controller_dec = DecentralizedController(robots_link)
+    scene_dec = Simulation(fig_dec_link, ax_dec, robots_link, controller_dec)
+    scene_dec.show_animation()
 
     # controller = CentralController(robots)
-    controller2 = DoubleIntegralController(robots2)
-    simulation_scene2 = Simulation(fig2, ax2, robots2, controller2)
-    simulation_scene2.show_animation()
+    controller_double_integral = DoubleIntegralController(robots_equal_spaced1)
+    scene_double_integral = Simulation(fig_dec_circle, ax_dec_circle, robots_equal_spaced1, controller_double_integral)
+    scene_double_integral.show_animation()
 
-    controller = EclipseTraceController(robots)
-    simulation_scene = Simulation(fig, ax, robots, controller)
-    simulation_scene.show_animation()
+    controller_eclipse_trace = EclipseTraceController(robots_equal_spaced)
+    scene_eclipse = Simulation(fig_dec_eclipse, ax_dec_eclipse, robots_equal_spaced, controller_eclipse_trace)
+    scene_eclipse.show_animation()
     # simulation_scene.save_animation("test.mp4")
     plt.show()
 
