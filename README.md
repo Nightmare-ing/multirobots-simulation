@@ -108,4 +108,18 @@ eclipse.
 I think maybe it's better to implement a `EcpliseTraceController` class and then implement `DecentralizedController` for
 `EclipseTraceController` class, but I have no time. If you'd like, you can implement that.
 
+## `Simulation` class
+
+This class has four main components, `robots`, `controller`, `ani` for storing the animation instance, and single `fig` 
+and `ax` for plotting this instance of simulation. 
+I do animation with `matplotlib` and `matplotlib.animation`, more accurately, I use 
+`matplotlib.animation.FuncAnimation`. 
+To run the animation, three basic methods are required based on the official document. With this `show_animation` 
+method, you can simulate multiple scene at the same time, just by creating multiple instances of `Simulation` class.
+
+## `main.py`
+
+In main function, I created three instances of `Simulation` class. Note that the initial position of robots for eclipse
+trace is not along the trace, but that's fine because it'll converge to the trace soon.
+
 
