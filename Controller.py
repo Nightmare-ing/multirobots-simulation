@@ -2,8 +2,6 @@ import matplotlib.patches as patches
 import numpy as np
 import itertools
 
-from Parts import Robot
-
 
 class Controller:
     def __init__(self, robots):
@@ -85,34 +83,18 @@ class CircularTraceController(Controller):
 
     @property
     def _speed_range(self):
-        """
-        Define available norm of speed range
-        :return: available norm of speed range, np.array([a, b])
-        """
         return np.array([0.0, 2 * self.w_r * self.radius])
 
     @property
     def _angular_vel_range(self):
-        """
-        Define available angular velocity range here
-        :return: available angular velocity range, np.array([a, b])
-        """
         return np.array([-10 * self.w_r, 10 * self.w_r])
 
     @property
     def _acceleration_range(self):
-        """
-        Define available acceleration range here
-        :return: available acceleration range, np.array([a, b])
-        """
         return np.array([-self.__gravity_velocity, self.__gravity_velocity])
 
     @property
     def desired_trace_artist(self):
-        """
-        Desired trace Artist for drawing
-        :return:
-        """
         return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
     def speed_adjust(self, robot, speed_along_trace):
@@ -149,22 +131,12 @@ class CircularTraceController(Controller):
             speeds[index] = (speed_x_adjusted, speed_y_adjusted, rotate_speed)
 
     def speed_round(self, speeds_xy):
-        """
-        Round transferred in speeds to valid range
-        :param speeds_xy: speeds (x, y) or speed_norm to be round
-        :return: rounded speeds
-        """
         if np.linalg.norm(speeds_xy) < self._speed_range[1]:
             return speeds_xy
         else:
             return speeds_xy / np.linalg.norm(speeds_xy) * self._speed_range[1]
 
     def angular_vel_round(self, angular_vel):
-        """
-        Round transferred in angular velocity to valid range
-        :param angular_vel: angular velocity to be round
-        :return: rounded angular velocity
-        """
         if angular_vel > self._angular_vel_range[1]:
             return self._angular_vel_range[1]
         elif angular_vel < self._angular_vel_range[0]:
@@ -173,11 +145,6 @@ class CircularTraceController(Controller):
             return angular_vel
 
     def acceleration_round(self, acceleration_xy):
-        """
-        Round transferred in acceleration to valid range
-        :param acceleration_xy: acceleration (x, y) to be round
-        :return: rounded acceleration
-        """
         if np.linalg.norm(acceleration_xy) < self._acceleration_range[1]:
             return acceleration_xy
         else:
@@ -289,7 +256,11 @@ class DecentralizedController(CircularTraceController):
             yield dt, control_speeds
 
     def speeds_to_maintain_connection(self):
-        speeds = []  # [(speed_along_trace, rotate_speed), ...]
+        """
+        Compute the speeds according to the algorithm described in paper
+        :return: control speeds, [(speed_x, speed_y, rotate_speed), ...]
+        """
+        speeds = []
         for index, robot in enumerate(self.robots):
             _, visible_robots_index = robot.get_visible_robots(self.robots)
             if visible_robots_index:
@@ -308,7 +279,7 @@ class DecentralizedController(CircularTraceController):
 
 
 class DoubleIntegralController(DecentralizedController):
-    __k_acc = 0.95
+    __k_acc = 0.95  # param for adjusting gain of acceleration
 
     def __init__(self, robots):
         super().__init__(robots)
