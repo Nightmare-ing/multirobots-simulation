@@ -49,7 +49,7 @@ class Controller:
     def speed_round(self, speeds_xy):
         """
         Round transferred in speeds to valid range
-        :param speeds_xy: speeds (x, y) or speed_norm to be round
+        :param speeds_xy: speeds (x, y) to be round
         :return: rounded speeds
         """
         return None
@@ -132,9 +132,10 @@ class CircularTraceController(Controller):
 
     def speed_round(self, speeds_xy):
         if np.linalg.norm(speeds_xy) < self._speed_range[1]:
-            return speeds_xy
+            return tuple(speeds_xy)
         else:
-            return speeds_xy / np.linalg.norm(speeds_xy) * self._speed_range[1]
+            angle = np.arctan2(speeds_xy[1], speeds_xy[0])
+            return tuple(np.array([np.cos(angle), np.sin(angle)]) * self._speed_range[1])
 
     def angular_vel_round(self, angular_vel):
         if angular_vel > self._angular_vel_range[1]:
@@ -146,9 +147,10 @@ class CircularTraceController(Controller):
 
     def acceleration_round(self, acceleration_xy):
         if np.linalg.norm(acceleration_xy) < self._acceleration_range[1]:
-            return acceleration_xy
+            return tuple(acceleration_xy)
         else:
-            return acceleration_xy / np.linalg.norm(acceleration_xy) * self._acceleration_range[1]
+            angle = np.arctan2(acceleration_xy[1], acceleration_xy[0])
+            return tuple(np.array([np.cos(angle), np.sin(angle)]) * self._acceleration_range[1])
 
 
 class CentralController(CircularTraceController):
@@ -268,12 +270,12 @@ class DecentralizedController(CircularTraceController):
                 u = ((-self.matrix[index, visible_robots_index]
                       * (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index])) ** 2 *
                      np.linalg.norm(self.robots[index].posture[:2] - pj_vec) / self.sigma ** 2).sum()
-                speed_along_trace = self.speed_round(u)
+                speed_along_trace = u
                 rotate_speed = self.angular_vel_round(u / self.radius) / self.k
             else:
                 speed_along_trace = self._speed_range[1]
                 rotate_speed = self._angular_vel_range[1]
-            speed = self.speed_adjust(robot, speed_along_trace) + (rotate_speed,)
+            speed = self.speed_round(self.speed_adjust(robot, speed_along_trace)) + (rotate_speed,)
             speeds.append(speed)
         return speeds
 
@@ -291,7 +293,7 @@ class DoubleIntegralController(DecentralizedController):
             cur_speeds = [robot.speed for robot in self.robots]
             self.adjust_ave(control_speeds)
             acceleration = [(speed - cur_speed) * self.__k_acc for speed, cur_speed in zip(control_speeds, cur_speeds)]
-            acceleration = [self.acceleration_round(acc) for acc in acceleration]
+            acceleration = [self.acceleration_round(acc[:2]) + (acc[2],) for acc in acceleration]
             self.update_v_tilde()
             self.update_l_matrix()
             print(f"Estimation of lambda_tilde of double integral Controller: {self.lambda2_tilde}")
