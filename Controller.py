@@ -254,7 +254,7 @@ class DecentralizedController(CircularTraceController):
             self.adjust_ave(control_speeds)
             self.update_v_tilde()
             self.update_l_matrix()
-            print(f"Estimation of lambda_tilde of decentralized controller: {self.lambda2_tilde}")
+            # print(f"Estimation of lambda_tilde of decentralized controller: {self.lambda2_tilde}")
             yield dt, control_speeds
 
     def speeds_to_maintain_connection(self):
@@ -296,7 +296,7 @@ class DoubleIntegralController(DecentralizedController):
             acceleration = [self.acceleration_round(acc[:2]) + (acc[2],) for acc in acceleration]
             self.update_v_tilde()
             self.update_l_matrix()
-            print(f"Estimation of lambda_tilde of double integral Controller: {self.lambda2_tilde}")
+            # print(f"Estimation of lambda_tilde of double integral Controller: {self.lambda2_tilde}")
             yield dt, acceleration
 
 
