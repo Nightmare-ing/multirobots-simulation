@@ -59,7 +59,7 @@ class Simulation:
         """
         self.ani = animation.FuncAnimation(self.fig, self.update_scene, self.controller.speed_gen,
                                            init_func=self.initialize_scene, interval=100, blit=True,
-                                           cache_frame_data=False, save_count=100)
+                                           cache_frame_data=False, save_count=1000)
 
-    def save_animation(self, filename, fps=60):
+    def save_animation(self, filename, fps=30):
         self.ani.save(filename, fps=fps, dpi=200)

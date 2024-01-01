@@ -1,3 +1,4 @@
+import concurrent.futures
 import math
 
 import matplotlib.pyplot as plt
@@ -61,6 +62,12 @@ def main():
     scene_dec.show_animation()
     scene_double_integral.show_animation()
     scene_eclipse.show_animation()
+
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+    #     executor.submit(scene_dec.save_animation("dec_link.mp4"))
+    #     executor.submit(scene_double_integral.save_animation("dec_circle.mp4"))
+    #     executor.submit(scene_eclipse.save_animation("dec_eclipse.mp4"))
+
     plt.show()
 
 
