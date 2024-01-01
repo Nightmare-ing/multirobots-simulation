@@ -2,7 +2,7 @@ import math
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from Parts import Robot, OnlySeeFarthestOneRobot, DoubleIntegralOnlySeeFarthestOneRobot
+from Parts import Robot, SeeFarthestOneRobot, DoubleIntegralRobot
 from Controller import CentralController, DecentralizedController, DoubleIntegralController, EclipseTraceController
 from Simulation import Simulation
 
@@ -22,12 +22,12 @@ def link_posture(num_robots, radius=5.0):
 
 
 def main():
-    robots_equal_spaced = OnlySeeFarthestOneRobot.initialize_robots(4, equal_space_posture(4),
-                                                                    speeds=[(0, 0, 0)] * 4)
-    robots_link = OnlySeeFarthestOneRobot.initialize_robots(4, link_posture(4),
-                                                            speeds=[(0, 0, 0)] * 4)
-    robots_equal_spaced1 = DoubleIntegralOnlySeeFarthestOneRobot.initialize_robots(4, equal_space_posture(4),
-                                                                                   speeds=[(0, 0, 0)] * 4)
+    robots_equal_spaced = SeeFarthestOneRobot.initialize_group(4, equal_space_posture(4),
+                                                               speeds=[(0, 0, 0)] * 4)
+    robots_link = SeeFarthestOneRobot.initialize_group(4, link_posture(4),
+                                                       speeds=[(0, 0, 0)] * 4)
+    robots_equal_spaced1 = DoubleIntegralRobot.initialize_group(4, equal_space_posture(4),
+                                                                speeds=[(0, 0, 0)] * 4)
 
     # dec means decentralized, cen means centralized
     fig_dec_circle, ax_dec_circle = plt.subplots()

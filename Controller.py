@@ -197,8 +197,7 @@ class DecentralizedController(CircularTraceController):
         Compute and update z vector, namely the Ave({v_tilde2, v_tilde2 ** 2})
         """
         for index, robot in enumerate(self.robots):
-            visible_robots_index = [visible_robot.robot_id for visible_robot in
-                                    robot.get_visible_robots(self.robots)]
+            _, visible_robots_index = robot.get_visible_robots(self.robots)
             sum_zi_minus_zj = (self.z_mat[index] - self.z_mat[visible_robots_index]).sum(axis=0)
             sum_wi_minus_wj = (self.w_mat[index] - self.w_mat[visible_robots_index]).sum(axis=0)
             dw_i = -self.ki * sum_zi_minus_zj
@@ -212,8 +211,7 @@ class DecentralizedController(CircularTraceController):
         Compute and update the eigen vector(self.v_tilde2) estimation of robot i
         """
         for index, robot in enumerate(self.robots):
-            visible_robots_index = [visible_robot.robot_id for visible_robot in
-                                    robot.get_visible_robots(self.robots)]
+            _, visible_robots_index = robot.get_visible_robots(self.robots)
             sum_aij_times_v2i_minus_v2j = ((self.matrix[index, visible_robots_index] *
                                             (self.v_tilde2_vec[index] - self.v_tilde2_vec[visible_robots_index]))
                                            .sum(axis=0))
@@ -243,8 +241,7 @@ class DecentralizedController(CircularTraceController):
     def speeds_to_maintain_connection(self):
         speeds = []  # [(speed_along_trace, rotate_speed), ...]
         for index, robot in enumerate(self.robots):
-            visible_robots_index: list[int] = [visible_robot.robot_id for visible_robot in
-                                               robot.get_visible_robots(self.robots)]
+            _, visible_robots_index = robot.get_visible_robots(self.robots)
             if visible_robots_index:
                 pj_vec = np.array([self.robots[i].posture[:2] for i in visible_robots_index])
                 u = ((-self.matrix[index, visible_robots_index]
