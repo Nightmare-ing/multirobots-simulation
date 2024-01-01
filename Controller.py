@@ -2,17 +2,86 @@ import matplotlib.patches as patches
 import numpy as np
 import itertools
 
+from Parts import Robot
 
-class CircularTraceController:
+
+class Controller:
+    def __init__(self, robots):
+        self.robots = robots  # robots to control
+
+    @property
+    def _speed_range(self):
+        """
+        Define available norm of speed range
+        :return: available norm of speed range, np.array([a, b])
+        """
+        return None
+
+    @property
+    def _angular_vel_range(self):
+        """
+        Define available angular velocity range here
+        :return: available angular velocity range, np.array([a, b])
+        """
+        return None
+
+    @property
+    def _acceleration_range(self):
+        """
+        Define available acceleration range here
+        :return: available acceleration range, np.array([a, b])
+        """
+        return None
+
+    @property
+    def desired_trace_artist(self):
+        """
+        Desired trace Artist for drawing
+        :return:
+        """
+        return None
+
+    def speed_gen(self):
+        """
+        Main control algorithm here, just override this
+        :return: dt(time increment step), speeds for all robots
+        """
+        yield 0, [(0, 0, 0)] * len(self.robots)
+
+    def speed_round(self, speeds_xy):
+        """
+        Round transferred in speeds to valid range
+        :param speeds_xy: speeds (x, y) or speed_norm to be round
+        :return: rounded speeds
+        """
+        return None
+
+    def angular_vel_round(self, angular_vel):
+        """
+        Round transferred in angular velocity to valid range
+        :param angular_vel: angular velocity to be round
+        :return: rounded angular velocity
+        """
+        return None
+
+    def acceleration_round(self, acceleration_xy):
+        """
+        Round transferred in acceleration to valid range
+        :param acceleration_xy: acceleration (x, y) to be round
+        :return: rounded acceleration
+        """
+        return None
+
+
+class CircularTraceController(Controller):
     __gravity_velocity = 9.81
     k = 100.0  # adjust param for controlling speed_along_radius
 
     def __init__(self, robots):
+        super().__init__(robots)
         self.radius = 5.0  # radius of the desired trace
         self.central_point = (0.0, 0.0)  # central point coordinates of the desired trace
         self.w_r = 1.0  # required robots rotating speed along the trace
-        self.robots = robots  # robots to control
-        self.matrix = np.zeros((len(self.robots), len(self.robots)))  # for storing Laplacian matrix
 
     @property
     def _speed_range(self):
@@ -44,23 +113,7 @@ class CircularTraceController:
         Desired trace Artist for drawing
         :return:
         """
-        return None
-
-    def update_l_matrix(self):
-        """
-        Dynamically compute Laplacian matrix
-        :return: Laplacian matrix
-        """
-        a_matrix = np.zeros((len(self.robots), len(self.robots)))
-        d_matrix = np.zeros((len(self.robots), len(self.robots)))
-        for (i, j), _ in np.ndenumerate(self.matrix):
-            if self.robots[i].inspect(self.robots[j]):
-                a_matrix[i, j] = np.exp(-np.linalg.norm(self.robots[i].posture[:2] - self.robots[j].posture[:2]))
-
-        for i in range(len(self.robots)):
-            d_matrix[i, i] = a_matrix[i, :].sum()
-
-        self.matrix = a_matrix - d_matrix
+        return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
     def speed_adjust(self, robot, speed_along_trace):
         """
@@ -94,13 +147,6 @@ class CircularTraceController:
             speed_x_adjusted = speed_norm_adjusted[index] * np.cos(angle)
             speed_y_adjusted = speed_norm_adjusted[index] * np.sin(angle)
             speeds[index] = (speed_x_adjusted, speed_y_adjusted, rotate_speed)
-
-    def speed_gen(self):
-        """
-        Main control algorithm here, just override this
-        :return: dt(time increment step), speeds for all robots
-        """
-        yield 0, [(0, 0, 0)] * len(self.robots)
 
     def speed_round(self, speeds_xy):
         """
@@ -142,17 +188,11 @@ class CentralController(CircularTraceController):
     def __init__(self, robots):
         super().__init__(robots)
 
-    @property
-    def desired_trace_artist(self):
-        return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
-
     def speed_gen(self):
         for _ in itertools.count():
             speeds = []
             dt = 0.005
             for robot in self.robots:
-                cur_pos_angle = np.arctan2(robot.posture[1] - self.central_point[1],
-                                           robot.posture[0] - self.central_point[0])
                 speed_along_trace = self.w_r * self.radius
                 speed = self.speed_adjust(robot, speed_along_trace) + (self._angular_vel_range[1],)
                 speeds.append(speed)
@@ -171,9 +211,27 @@ class DecentralizedController(CircularTraceController):
 
     def __init__(self, robots):
         super().__init__(robots)
+        self.matrix = np.zeros((len(self.robots), len(self.robots)))  # for storing Laplacian matrix
         self.z_mat = np.ones((len(self.robots), 2))  # for computing z vector by integrating
         self.w_mat = np.ones((len(self.robots), 2))  # for computing w vector by integrating
         self.v_tilde2_vec = np.ones(len(self.robots))  # for computing v_tilde2 vector by integrating
+
+    def update_l_matrix(self):
+        """
+        Dynamically compute Laplacian matrix
+        :return: Laplacian matrix
+        """
+        a_matrix = np.zeros((len(self.robots), len(self.robots)))
+        d_matrix = np.zeros((len(self.robots), len(self.robots)))
+        for (i, j), _ in np.ndenumerate(self.matrix):
+            if self.robots[i].inspect(self.robots[j]):
+                # the farther distance, the smaller weight
+                a_matrix[i, j] = np.exp(-np.linalg.norm(self.robots[i].posture[:2] - self.robots[j].posture[:2]))
+
+        for i in range(len(self.robots)):
+            d_matrix[i, i] = a_matrix[i, :].sum()
+
+        self.matrix = a_matrix - d_matrix
 
     @property
     def alpha(self):
@@ -183,14 +241,6 @@ class DecentralizedController(CircularTraceController):
         :return: [v_tilde2, v_tilde2 ** 2]
         """
         return np.array([self.v_tilde2_vec, self.v_tilde2_vec ** 2]).transpose()
-
-    @property
-    def desired_trace_artist(self):
-        """
-        Desired trace Artist for drawing
-        :return: desired circular trace
-        """
-        return patches.Circle(self.central_point, self.radius, color='cyan', fill=False)
 
     def update_z(self):
         """
@@ -278,10 +328,15 @@ class DoubleIntegralController(DecentralizedController):
 
 
 class EclipseTraceController(DecentralizedController):
+    """
+    The EclipseTraceController based on CircularTraceController, just apply affine transformation on the
+    circular trace in CircularTraceController
+    """
     def __init__(self, robots):
         super().__init__(robots)
         self.a_radius = 5.0
         self.b_radius = 2.0
+        self.radius = self.a_radius
 
     @property
     def desired_trace_artist(self):
