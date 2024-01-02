@@ -86,6 +86,12 @@ To implement the algorithms, I added some helper functions to make the code more
 method simple and clear. Maybe they should be private, but to implement `EclipseTraceController` with little code, I 
 just make them public.
 
+The speed for each robot is computed according to the algorithm with the prerequisites that it can see some robots. If 
+it can't see any robots, the computed speed will be zero. So I modified a bit, when the robot can't see any robots, it 
+rotates and move at the fastest speed to search for robots to connect.
+When it connects some robots, it moves and rotates according to the speed computed with the algorithm mentioned in 
+paper.
+
 ### `DoubleIntegralController` class
 
 This class inherits `DecentralizedController` class and is for controlling the double integral robots model in 
